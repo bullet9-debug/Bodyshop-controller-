@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bodyshop Controller</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:100vh;}
+.topbar{background:#fff;border-bottom:3px solid #f47920;padding:0 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:52px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.logo{background:#f47920;color:#fff;font-weight:900;font-size:11px;letter-spacing:1px;padding:4px 8px;line-height:1.3;flex-shrink:0;}
+.apptitle{font-size:17px;font-weight:700;flex:1;white-space:nowrap;color:#1a2b44;}
+.apptitle span{color:#f47920;}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;padding:6px 0;}
+.tab{background:transparent;border:1px solid #d1d9e6;color:#6b7c96;font-size:13px;font-weight:700;padding:7px 16px;cursor:pointer;border-radius:3px;position:relative;}
+.tab:hover{border-color:#f47920;color:#f47920;}
+.tab.on{background:#f47920;border-color:#f47920;color:#fff;}
+.tab-badge{position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;font-size:9px;font-weight:900;border-radius:9px;padding:1px 5px;min-width:16px;text-align:center;line-height:14px;}
+.topstats{display:flex;gap:6px;align-items:center;padding:4px 0;flex-wrap:wrap;}
+.hs{background:#f7f8fa;border:1px solid #d1d9e6;border-radius:3px;padding:3px 8px;font-size:11px;color:#6b7c96;white-space:nowrap;}
+.hs b{color:#1a2b44;font-size:13px;margin-right:2px;}
+.hs.al{border-color:#e74c3c;color:#c0392b;}.hs.al b{color:#c0392b;}
+.hs.go{border-color:#27ae60;color:#1e8449;}.hs.go b{color:#1e8449;}
+.hs.am{border-color:#f39c12;color:#d68910;}.hs.am b{color:#d68910;}
+.view{display:none;padding:14px 14px 40px;}
+.view.on{display:block;}
+.btn{background:#f7f8fa;border:1px solid #d1d9e6;color:#4a5f7a;font-size:13px;font-weight:700;padding:8px 14px;cursor:pointer;border-radius:3px;}
+.btn:hover{border-color:#f47920;color:#f47920;}
+.btn.pr{background:#f47920;border-color:#f47920;color:#fff;}
+.btn.pr:hover{background:#c95e00;}
+.btn.dr{background:rgba(231,76,60,0.06);border:1px solid #e74c3c;color:#c0392b;}
+.btn.dr:hover{background:#e74c3c;color:#fff;}
+.btn.gr{background:rgba(39,174,96,0.06);border:1px solid #27ae60;color:#1e8449;}
+.btn.gr:hover{background:#27ae60;color:#fff;}
+.btn.or{background:rgba(244,121,32,0.08);border:1px solid #f47920;color:#c95e00;}
+.btn.or:hover{background:#f47920;color:#fff;}
+.brief-overdue-banner{background:#fff3cd;border:1px solid #f39c12;border-radius:5px;padding:9px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#856404;}
+.brief-signoff-note{font-size:11px;color:#6b7c96;padding:4px 0 8px;font-style:italic;}
+.urgency-strip{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.upill{display:flex;align-items:center;gap:5px;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;}
+.upill.crit{background:rgba(231,76,60,0.1);border-color:#e74c3c;color:#c0392b;}
+.upill.warn{background:rgba(243,156,18,0.1);border-color:#f39c12;color:#d68910;}
+.upill.ok{background:rgba(39,174,96,0.1);border-color:#27ae60;color:#1e8449;}
+.upill.info{background:rgba(52,152,219,0.1);border-color:#3498db;color:#2471a3;}
+.upill.active{filter:brightness(0.88);}
+.udot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.crit .udot{background:#e74c3c;}.warn .udot{background:#f39c12;}
+.ok .udot{background:#27ae60;}.info .udot{background:#3498db;}
+.today-panel{background:#fff;border:1px solid #d1d9e6;border-radius:6px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.today-hdr{background:#f7f8fa;border-bottom:2px solid #f47920;padding:9px 14px;display:flex;align-items:center;gap:10px;}
+.today-hdr-title{font-size:14px;font-weight:700;flex:1;color:#1a2b44;}
+.today-hdr-date{font-size:12px;color:#6b7c96;}
+.today-empty{padding:10px 14px;color:#8fa0b8;font-size:13px;font-style:italic;}
+.action-list{padding:6px 10px;display:flex;flex-direction:column;gap:3px;}
+.action-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;background:#f7f8fa;border:1px solid #d1d9e6;}
+.action-item.done{opacity:0.45;}
+.action-item.done .action-text{text-decoration:line-through;color:#8fa0b8;}
+.action-urg{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.action-urg.r{background:#e74c3c;}.action-urg.a{background:#f39c12;}.action-urg.g{background:#27ae60;}
+.action-text{font-size:12px;flex:1;line-height:1.3;color:#1a2b44;}
+.action-reg{font-size:11px;font-weight:700;color:#f47920;background:rgba(244,121,32,0.1);padding:1px 5px;border-radius:2px;white-space:nowrap;}
+.action-tick{width:18px;height:18px;border:2px solid #b0bdd0;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent;flex-shrink:0;}
+.action-item.done .action-tick{background:#27ae60;border-color:#27ae60;color:#fff;}
+.action-del{background:transparent;border:none;color:#8fa0b8;font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;}
+.action-del:hover{color:#e74c3c;}
+.add-action-row{display:flex;gap:5px;padding:7px 10px;border-top:1px solid #d1d9e6;flex-wrap:wrap;background:#f7f8fa;}
+.action-input{background:#fff;border:1px solid #d1d9e6;color:#1a2b44;font-size:13px;padding:6px 9px;border-radius:3px;flex:1;min-width:140px;}
+.action-input:focus{outline:none;border-color:#f47920;}
+.action-reg-input{background:#fff;border:1px solid #d1d9e6;color:#f47920;font-size:12px;font-weight:700;padding:6px 8px;border-radius:3px;width:80px;text-transform:uppercase;}
+.action-reg-input:focus{outline:none;border-color:#f47920;}
+.action-urg-sel{background:#fff;border:1px solid #d1d9e6;color:#1a2b44;font-size:12px;padding:6px 8px;border-radius:3px;}
+.action-urg-sel:focus{outline:none;border-color:#f47920;}
+.wtool{display:flex;align-items:center;gap:7px;margin-bottom:11px;flex-wrap:wrap;}
+.fsel,.sbox{background:#fff;border:1px solid #d1d9e6;color:#1a2b44;font-size:12px;padding:6px 8px;border-radius:3px;}
+.sbox{width:130px;}.sbox::placeholder{color:#8fa0b8;}
+.fsel:focus,.sbox:focus{outline:none;border-color:#f47920;}
+.kb-hint{font-size:11px;color:#b0bdd0;background:#f7f8fa;border:1px solid #d1d9e6;border-radius:3px;padding:2px 6px;font-family:monospace;}
+.wstage-hdr{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:5px 5px 0 0;margin-top:11px;border:1px solid #d1d9e6;border-bottom:none;background:#f7f8fa;}
+.wstage-hdr:first-child{margin-top:0;}
+.wstage-title{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;flex:1;color:#1a2b44;}
+.wstage-cnt{background:#fff;border:1px solid #d1d9e6;border-radius:8px;padding:1px 7px;font-size:11px;color:#6b7c96;font-weight:700;}
+.wstage-body{border:1px solid #d1d9e6;border-radius:0 0 5px 5px;padding:6px;display:flex;flex-direction:column;gap:5px;margin-bottom:2px;background:#fff;}
+.wstage-empty{padding:8px 12px;color:#8fa0b8;font-size:12px;font-style:italic;}
+.wstage-hdr.sa{border-color:#f39c12;background:rgba(243,156,18,0.06);}.wstage-hdr.sa .wstage-title{color:#d68910;}.wstage-body.sa{border-color:#f39c12;}
+.wstage-hdr.sp{border-color:#3498db;background:rgba(52,152,219,0.06);}.wstage-hdr.sp .wstage-title{color:#2471a3;}.wstage-body.sp{border-color:#3498db;}
+.wstage-hdr.sr{border-color:#f47920;background:rgba(244,121,32,0.06);}.wstage-hdr.sr .wstage-title{color:#c95e00;}.wstage-body.sr{border-color:#f47920;}
+.wstage-hdr.sq{border-color:#9b59b6;background:rgba(155,89,182,0.06);}.wstage-hdr.sq .wstage-title{color:#7d3c98;}.wstage-body.sq{border-color:#9b59b6;}
+.wstage-hdr.srd{border-color:#27ae60;background:rgba(39,174,96,0.06);}.wstage-hdr.srd .wstage-title{color:#1e8449;}.wstage-body.srd{border-color:#27ae60;}
+.wstage-hdr.si{border-color:#1abc9c;background:rgba(26,188,156,0.06);}.wstage-hdr.si .wstage-title{color:#148f77;}.wstage-body.si{border-color:#1abc9c;}
+.jcard{background:#fff;border:1px solid #d1d9e6;border-radius:4px;padding:8px 10px;cursor:pointer;position:relative;transition:border-color 0.15s,box-shadow 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+.jcard:hover{border-color:#f47920;box-shadow:0 2px 6px rgba(244,121,32,0.15);}
+.jcard.uc{border-left:4px solid #e74c3c;background:rgba(231,76,60,0.015);}
+.jcard.uw{border-left:4px solid #f39c12;}
+.jcard.uo{border-left:4px solid #27ae60;}
+.jcard.ui{border-left:4px solid #3498db;}
+.jcard.auto-flagged{box-shadow:0 0 0 2px rgba(231,76,60,0.2);}
+.jcard-top{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.jreg{font-size:15px;font-weight:800;letter-spacing:1px;color:#1a2b44;flex:1;}
+.jurg{font-size:9px;font-weight:800;padding:2px 5px;border-radius:2px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;}
+.jurg.uc{background:rgba(231,76,60,0.1);color:#c0392b;border:1px solid #e74c3c;}
+.jurg.uw{background:rgba(243,156,18,0.1);color:#d68910;border:1px solid #f39c12;}
+.jurg.uo{background:rgba(39,174,96,0.08);color:#1e8449;}
+.jurg.ui{background:rgba(52,152,219,0.08);color:#2471a3;}
+.jcat{font-size:9px;font-weight:800;padding:2px 5px;border-radius:2px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;}
+.cat-strip{background:rgba(231,76,60,0.08);color:#c0392b;border:1px solid #e74c3c;}
+.cat-prime{background:rgba(155,89,182,0.08);color:#7d3c98;border:1px solid #9b59b6;}
+.cat-paint{background:rgba(52,152,219,0.08);color:#2471a3;border:1px solid #3498db;}
+.cat-blend{background:rgba(39,174,96,0.08);color:#1e8449;border:1px solid #27ae60;}
+.cat-pdr{background:rgba(39,174,96,0.08);color:#1e8449;border:1px solid #27ae60;}
+.cat-mech{background:rgba(243,156,18,0.08);color:#d68910;border:1px solid #f39c12;}
+.cat-glass{background:rgba(52,152,219,0.06);color:#2471a3;border:1px solid #5dade2;}
+.cat-tl{background:rgba(231,76,60,0.1);color:#c0392b;border:1px solid #e74c3c;}
+.cat-none{background:#f0f2f5;color:#6b7c96;border:1px solid #d1d9e6;}
+.jrow2{display:flex;align-items:center;gap:5px;margin-bottom:3px;flex-wrap:wrap;}
+.jveh{font-size:10px;color:#6b7c96;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;}
+.jins{font-size:10px;font-weight:700;color:#8fa0b8;}
+.jdays{font-size:10px;font-weight:700;color:#6b7c96;background:#f0f2f5;border-radius:2px;padding:1px 4px;border:1px solid #d1d9e6;white-space:nowrap;margin-left:auto;}
+.jdays.ov{color:#c0392b;background:rgba(231,76,60,0.08);border-color:#e74c3c;}
+.jflags{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:2px;}
+.flag{font-size:9px;font-weight:800;padding:2px 4px;border-radius:2px;text-transform:uppercase;}
+.fs{background:rgba(243,156,18,0.1);color:#d68910;border:1px solid #f39c12;}
+.fe{background:rgba(52,152,219,0.1);color:#2471a3;border:1px solid #3498db;}
+.fad{background:#9b59b6;color:#fff;}
+.fc{background:rgba(231,76,60,0.1);color:#c0392b;border:1px solid #e74c3c;}
+.fx{background:rgba(244,121,32,0.1);color:#c95e00;border:1px solid #f47920;}
+.ft{background:#e74c3c;color:#fff;}
+.fp{background:rgba(231,76,60,0.1);color:#c0392b;border:1px solid #e74c3c;}
+.fv{background:rgba(155,89,182,0.1);color:#7d3c98;border:1px solid #9b59b6;}
+.fauto-ov{background:rgba(231,76,60,0.1);color:#c0392b;border:1px dashed #e74c3c;}
+.fauto-hire{background:rgba(243,156,18,0.1);color:#d68910;border:1px dashed #f39c12;}
+.fauto-auth{background:rgba(231,76,60,0.08);color:#c0392b;border:1px dashed #e74c3c;}
+.jcard-detail{display:none;margin-top:5px;border-top:1px solid #edf0f4;padding-top:5px;}
+.jcard:hover .jcard-detail,.jcard.pinned .jcard-detail{display:block;}
+.jauth{display:inline-block;font-size:10px;padding:2px 6px;border-radius:2px;margin-bottom:3px;background:rgba(243,156,18,0.08);color:#d68910;border:1px dashed #f39c12;}
+.jcom{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px;}
+.jcom-i{font-size:10px;color:#6b7c96;background:#f0f2f5;border-radius:2px;padding:2px 5px;white-space:nowrap;}
+.jcom-i.w{color:#d68910;background:rgba(243,156,18,0.08);}
+.jcom-i.c{color:#c0392b;background:rgba(231,76,60,0.08);}
+.jteam{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:3px;}
+.tbadge{font-size:10px;font-weight:700;background:#f0f2f5;border:1px solid #d1d9e6;border-radius:2px;padding:1px 4px;color:#4a5f7a;}
+.jnotes{font-size:11px;color:#6b7c96;line-height:1.4;}
+.chase-sec-title{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#f47920;margin:14px 0 6px;padding-bottom:5px;border-bottom:1px solid #d1d9e6;}
+.chase-sec-title:first-child{margin-top:0;}
+.chase-list{display:flex;flex-direction:column;gap:5px;margin-bottom:4px;}
+.chase-row{background:#fff;border:1px solid #d1d9e6;border-radius:4px;padding:9px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+.chase-row:hover{border-color:#f47920;}
+.chase-row.crit{border-left:4px solid #e74c3c;}
+.chase-row.warn{border-left:4px solid #f39c12;}
+.chase-row.info{border-left:4px solid #3498db;}
+.chase-reg{font-size:14px;font-weight:800;color:#1a2b44;min-width:75px;}
+.chase-why{font-size:12px;font-weight:700;flex:1;color:#1a2b44;}
+.chase-meta{font-size:11px;color:#8fa0b8;}
+.chase-stage{font-size:10px;font-weight:700;padding:2px 6px;border-radius:2px;background:#f0f2f5;color:#4a5f7a;border:1px solid #d1d9e6;white-space:nowrap;}
+.chase-empty{padding:18px;color:#8fa0b8;font-size:13px;font-style:italic;text-align:center;background:#fff;border:1px solid #d1d9e6;border-radius:4px;}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;max-width:1400px;}
+.bcard{background:#fff;border:1px solid #d1d9e6;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.bcardh{background:#f7f8fa;border-bottom:1px solid #d1d9e6;padding:10px 13px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.bcardh:hover{background:#eef0f4;}
+.bctitle{font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#4a5f7a;flex:1;}
+.btally{font-size:12px;color:#8fa0b8;font-weight:600;}.btally.dn{color:#1e8449;}
+.bchev{font-size:11px;color:#8fa0b8;transition:transform 0.2s;margin-left:4px;}
+.bcard.cl .bchev{transform:rotate(-90deg);}.bcard.cl .bbody{display:none;}
+.bbody{padding:5px 13px 10px;}
+.btask{display:flex;align-items:center;gap:10px;padding:7px 5px;cursor:pointer;border-radius:3px;}
+.btask:hover{background:rgba(0,0,0,0.03);}
+.btask.ck .btlabel{text-decoration:line-through;color:#8fa0b8;}
+.tbox{width:20px;height:20px;border:2px solid #b0bdd0;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;}
+.btask.ck .tbox{background:#27ae60;border-color:#27ae60;color:#fff;}
+.btlabel{font-size:12px;color:#1a2b44;flex:1;line-height:1.3;}
+.btag{font-size:10px;font-weight:700;padding:2px 5px;border-radius:2px;text-transform:uppercase;flex-shrink:0;}
+.tr{background:rgba(231,76,60,0.08);color:#c0392b;}
+.ta{background:rgba(243,156,18,0.08);color:#d68910;}
+.tb{background:rgba(52,152,219,0.08);color:#2471a3;}
+.tg{background:rgba(39,174,96,0.08);color:#1e8449;}
+.targrow{display:flex;align-items:center;gap:10px;padding:8px 13px;border-top:1px solid #d1d9e6;margin-top:4px;}
+.targrow label{font-size:12px;color:#6b7c96;flex:1;text-transform:uppercase;}
+.targinput{background:#f7f8fa;border:1px solid #d1d9e6;color:#1a2b44;font-size:18px;font-weight:700;padding:4px 8px;border-radius:3px;width:60px;text-align:center;}
+.targinput:focus{outline:none;border-color:#f47920;}
+.attgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:5px;padding:8px 13px;}
+.attm{background:#f7f8fa;border:1px solid #d1d9e6;border-radius:4px;padding:6px 9px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#4a5f7a;}
+.attm:hover{border-color:#f47920;}
+.attm.pr{border-color:#27ae60;color:#1e8449;background:rgba(39,174,96,0.06);}
+.attm.ab{border-color:#e74c3c;color:#c0392b;background:rgba(231,76,60,0.06);}
+.adot{width:8px;height:8px;border-radius:50%;background:#d1d9e6;flex-shrink:0;}
+.attm.pr .adot{background:#27ae60;}.attm.ab .adot{background:#e74c3c;}
+.sobar{margin-top:12px;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #d1d9e6;border-radius:6px;padding:10px 14px;gap:10px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.sostatus{font-size:13px;color:#6b7c96;}.sostatus.dn{color:#1e8449;}
+.sobtn{background:#f47920;color:#fff;border:none;font-size:13px;font-weight:700;padding:8px 18px;cursor:pointer;border-radius:3px;}
+.sobtn:hover{background:#c95e00;}
+.eodgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:13px;}
+@media(min-width:600px){.eodgrid{grid-template-columns:repeat(6,1fr);}}
+.eodstat{background:#fff;border:1px solid #d1d9e6;border-radius:5px;padding:11px 8px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+.eodnum{font-size:32px;font-weight:900;line-height:1;margin-bottom:3px;color:#1a2b44;}
+.eodlbl{font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#6b7c96;}
+.eodstat.gn .eodnum{color:#1e8449;}.eodstat.am .eodnum{color:#d68910;}.eodstat.rd .eodnum{color:#c0392b;}.eodstat.bl .eodnum{color:#2471a3;}
+.eod-insight{background:rgba(243,156,18,0.07);border:1px solid #f39c12;border-radius:5px;padding:10px 14px;margin-bottom:12px;}
+.eod-insight-title{font-size:12px;font-weight:700;color:#d68910;margin-bottom:6px;text-transform:uppercase;}
+.eod-insight-item{font-size:13px;color:#1a2b44;padding:2px 0;}
+.eod-stitle{font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#6b7c96;margin:13px 0 6px;border-bottom:1px solid #d1d9e6;padding-bottom:5px;}
+.eod-list{display:flex;flex-direction:column;gap:4px;}
+.eod-row{background:#f7f8fa;border:1px solid #d1d9e6;border-radius:3px;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap;}
+.eod-reg{font-size:13px;font-weight:800;min-width:75px;color:#1a2b44;}
+.eod-info{color:#6b7c96;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.eod-sb{font-size:10px;font-weight:700;padding:2px 7px;border-radius:2px;flex-shrink:0;}
+.cat-breakdown{background:#fff;border:1px solid #d1d9e6;border-radius:6px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.cat-breakdown-title{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#f47920;margin-bottom:10px;}
+.cat-breakdown-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.cat-block{display:flex;flex-direction:column;align-items:center;gap:3px;background:#f7f8fa;border:1px solid #d1d9e6;border-radius:5px;padding:8px 12px;min-width:72px;flex:1;}
+.cat-block.bottleneck{border-color:#f39c12;background:rgba(243,156,18,0.04);}
+.cat-block.bottleneck .cat-block-num{color:#d68910;}
+.cat-block-num{font-size:24px;font-weight:900;line-height:1;color:#1a2b44;}
+.cat-block-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:center;color:#6b7c96;}
+.cat-block-warn{font-size:9px;color:#d68910;font-weight:700;margin-top:1px;}
+.handover-box{background:#fff;border:1px solid #d1d9e6;border-radius:6px;padding:12px 14px;margin-top:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.handover-box-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#f47920;margin-bottom:8px;}
+.handover-textarea{width:100%;background:#f7f8fa;border:1px solid #d1d9e6;color:#1a2b44;font-size:12px;font-family:monospace;padding:10px;border-radius:4px;min-height:200px;resize:vertical;line-height:1.6;}
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;max-width:1000px;}
+.setcard{background:#fff;border:1px solid #d1d9e6;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.settitle{background:#f7f8fa;border-bottom:1px solid #d1d9e6;padding:9px 13px;font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#4a5f7a;}
+.setbody{padding:9px 13px;display:flex;flex-direction:column;gap:6px;}
+.setbody p{font-size:12px;color:#6b7c96;line-height:1.5;}
+.mitem,.iitem{display:flex;align-items:center;gap:7px;background:#f7f8fa;border:1px solid #d1d9e6;border-radius:3px;padding:6px 9px;}
+.mninput,.iinput{background:transparent;border:none;color:#1a2b44;font-size:13px;flex:1;min-width:0;}
+.mninput:focus,.iinput:focus{outline:none;}
+.mrole{font-size:10px;font-weight:700;padding:2px 5px;border-radius:2px;text-transform:uppercase;flex-shrink:0;}
+.re{background:rgba(52,152,219,0.1);color:#2471a3;}.rt{background:rgba(244,121,32,0.1);color:#c95e00;}
+.rmv{background:transparent;border:none;color:#8fa0b8;font-size:16px;cursor:pointer;padding:0 3px;line-height:1;}
+.rmv:hover{color:#e74c3c;}
+.addrow{display:flex;gap:6px;padding:0 13px 11px;}
+.addinput{background:#fff;border:1px solid #d1d9e6;color:#1a2b44;font-size:13px;padding:7px 9px;border-radius:3px;flex:1;min-width:0;}
+.addinput:focus{outline:none;border-color:#f47920;}
+.addbtn{background:#f47920;border:none;color:#fff;font-size:13px;font-weight:700;padding:7px 14px;border-radius:3px;cursor:pointer;}
+.addbtn:hover{background:#c95e00;}
+.moverlay{display:none;position:fixed;inset:0;background:rgba(26,43,68,0.55);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.moverlay.op{display:flex;}
+.modal{background:#fff;border:1px solid #d1d9e6;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);}
+.mhdr{background:#f7f8fa;border-bottom:2px solid #f47920;padding:12px 15px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;}
+.mtitle{font-size:15px;font-weight:800;flex:1;color:#1a2b44;}
+.mclose{background:transparent;border:1px solid #d1d9e6;color:#6b7c96;font-size:15px;width:28px;height:28px;border-radius:3px;cursor:pointer;}
+.mclose:hover{border-color:#e74c3c;color:#e74c3c;}
+.mbody{padding:12px 15px;display:flex;flex-direction:column;gap:10px;}
+.frow{display:flex;gap:8px;}
+.fg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;}
+.fg3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.flbl{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#6b7c96;}
+.finput,.fselect,.ftarea{background:#fff;border:1px solid #d1d9e6;color:#1a2b44;font-size:13px;padding:7px 9px;border-radius:3px;width:100%;}
+.finput:focus,.fselect:focus,.ftarea:focus{outline:none;border-color:#f47920;}
+.ftarea{resize:vertical;height:52px;}
+.msec{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f47920;margin-top:4px;padding-bottom:4px;border-bottom:1px solid #edf0f4;}
+.expand-toggle{cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;}
+.expand-toggle .etarrow{font-size:10px;color:#8fa0b8;transition:transform 0.2s;}
+.expand-toggle.open .etarrow{transform:rotate(90deg);}
+.expand-body{display:none;flex-direction:column;gap:10px;padding-top:4px;}
+.expand-body.open{display:flex;}
+.sselrow{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+.sselbtn{background:#f7f8fa;border:1px solid #d1d9e6;color:#6b7c96;font-size:11px;font-weight:700;padding:7px 4px;border-radius:3px;cursor:pointer;text-align:center;text-transform:uppercase;}
+.sselbtn:hover{border-color:#f47920;color:#f47920;}
+.sselbtn.on{background:#f47920;border-color:#f47920;color:#fff;}
+.flagrow{display:flex;gap:4px;flex-wrap:wrap;}
+.ftog{background:#f7f8fa;border:1px solid #d1d9e6;color:#6b7c96;font-size:11px;font-weight:700;padding:5px 9px;border-radius:3px;cursor:pointer;text-transform:uppercase;}
+.ftog.on-supp{background:rgba(243,156,18,0.1);border-color:#f39c12;color:#d68910;}
+.ftog.on-eng{background:rgba(52,152,219,0.1);border-color:#3498db;color:#2471a3;}
+.ftog.on-adas{background:#9b59b6;border-color:#9b59b6;color:#fff;}
+.ftog.on-ch{background:rgba(231,76,60,0.1);border-color:#e74c3c;color:#c0392b;}
+.ftog.on-excess{background:rgba(244,121,32,0.1);border-color:#f47920;color:#c95e00;}
+.ftog.on-tl{background:#e74c3c;border-color:#e74c3c;color:#fff;}
+.ftog.on-complaint{background:rgba(231,76,60,0.1);border-color:#e74c3c;color:#c0392b;}
+.ftog.on-callback{background:rgba(243,156,18,0.1);border-color:#f39c12;color:#d68910;}
+.ftog.on-vip{background:rgba(155,89,182,0.1);border-color:#9b59b6;color:#7d3c98;}
+.ftog.on-vuln{background:rgba(52,152,219,0.1);border-color:#3498db;color:#2471a3;}
+.mfoot{padding:10px 15px;border-top:1px solid #d1d9e6;display:flex;gap:7px;justify-content:flex-end;background:#f7f8fa;}
+
+.dvla-row{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.dvla-btn{background:#1a2b44;border:none;color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.dvla-btn:hover{background:#f47920;}
+.dvla-btn:disabled{background:#b0bdd0;cursor:not-allowed;}
+.dvla-status{font-size:11px;padding:3px 8px;border-radius:3px;flex:1;}
+.dvla-status.ok{background:rgba(39,174,96,0.1);color:#1e8449;border:1px solid #27ae60;}
+.dvla-status.err{background:rgba(231,76,60,0.08);color:#c0392b;border:1px solid #e74c3c;}
+.dvla-status.spin{background:#f7f8fa;color:#6b7c96;border:1px solid #d1d9e6;}
+.dvla-detail{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+.dvla-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f0f2f5;border:1px solid #d1d9e6;color:#4a5f7a;}
+.dvla-pill.hi{background:rgba(244,121,32,0.08);border-color:#f47920;color:#c95e00;}
+.dvla-pill.ev{background:rgba(39,174,96,0.1);border-color:#27ae60;color:#1e8449;}
+
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(26,43,68,0.6);z-index:600;align-items:center;justify-content:center;padding:16px;}
+.confirm-box{background:#fff;border:1px solid #e74c3c;border-radius:8px;padding:22px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.15);}
+.confirm-msg{font-size:14px;color:#1a2b44;margin-bottom:18px;line-height:1.5;}
+.confirm-btns{display:flex;gap:10px;justify-content:center;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">BS<br>CTRL</div>
+  <div class="apptitle">Bodyshop <span>Controller</span></div>
+  <div class="topstats" id="topStats"></div>
+  <div class="tabs">
+    <button class="tab on" onclick="goTab(0,this)">Morning Brief</button>
+    <button class="tab" onclick="goTab(1,this)" id="tabChase">Chase List</button>
+    <button class="tab" onclick="goTab(2,this)">WIP Board</button>
+    <button class="tab" onclick="goTab(3,this)">End of Day</button>
+    <button class="tab" onclick="goTab(4,this)">Settings</button>
+  </div>
+</div>
+<div class="view on" id="v0">
+  <div id="briefBanner"></div>
+  <div class="bgrid" id="briefGrid"></div>
+  <div class="sobar">
+    <div class="sostatus" id="soStatus">Morning brief not yet signed off</div>
+    <button class="sobtn" id="soBtn">Sign Off Brief</button>
+  </div>
+</div>
+<div class="view" id="v1"><div id="chaseContent"></div></div>
+<div class="view" id="v2">
+  <div class="urgency-strip" id="urgStrip"></div>
+  <div class="today-panel">
+    <div class="today-hdr">
+      <div class="today-hdr-title">Today's Actions</div>
+      <div class="today-hdr-date" id="todayDate"></div>
+    </div>
+    <div id="actionContainer"></div>
+    <div class="add-action-row">
+      <input class="action-input" id="actionText" placeholder="Add action or note...">
+      <input class="action-reg-input" id="actionReg" placeholder="REG">
+      <select class="action-urg-sel" id="actionUrg">
+        <option value="r">Urgent</option>
+        <option value="a" selected>Normal</option>
+        <option value="g">FYI</option>
+      </select>
+      <button class="btn pr" onclick="addAction()">Add</button>
+    </div>
+  </div>
+  <div class="wtool">
+    <button class="btn pr" onclick="openAdd()">+ Add Job</button>
+    <span class="kb-hint" title="Keyboard shortcut">N</span>
+    <input class="sbox" type="text" placeholder="Search reg..." id="searchBox" oninput="renderBoard()">
+    <select class="fsel" id="fStage" onchange="renderBoard()">
+      <option value="">All Stages</option>
+      <option value="authority">Awaiting Auth</option>
+      <option value="parts">Parts</option>
+      <option value="repair">In Repair</option>
+      <option value="qc">QC</option>
+      <option value="ready">Ready</option>
+      <option value="invoiced">Invoiced</option>
+    </select>
+    <select class="fsel" id="fUrg" onchange="renderBoard();renderUrgStrip()">
+      <option value="">All Urgency</option>
+      <option value="crit">Critical</option>
+      <option value="warn">Warning</option>
+      <option value="info">Action Needed</option>
+      <option value="ok">On Track</option>
+    </select>
+    <select class="fsel" id="fIns" onchange="renderBoard()"><option value="">All Insurers</option></select>
+    <select class="fsel" id="fFlag" onchange="renderBoard()">
+      <option value="">All Flags</option>
+      <option value="supp">Supplement</option>
+      <option value="eng">Engineer</option>
+      <option value="adas">ADAS</option>
+      <option value="ch">Credit Hire</option>
+      <option value="excess">Excess</option>
+      <option value="tl">Total Loss</option>
+      <option value="complaint">Complaint</option>
+      <option value="callback">Callback</option>
+      <option value="vip">VIP</option>
+    </select>
+    <select class="fsel" id="fCat" onchange="renderBoard()">
+      <option value="">All Categories</option>
+      <option value="strip">Strip</option><option value="prime">Prime</option>
+      <option value="paint">Paint</option><option value="blend">Blend</option>
+      <option value="pdr">PDR</option><option value="mech">Mechanical</option>
+      <option value="glass">Glass</option><option value="tl">Total Loss</option>
+    </select>
+    <select class="fsel" id="fSort" onchange="renderBoard()">
+      <option value="urg">Sort: Urgency</option>
+      <option value="days">Sort: Days In</option>
+      <option value="hire">Sort: Hire Days</option>
+      <option value="reg">Sort: Reg</option>
+    </select>
+  </div>
+  <div id="wipList"></div>
+</div>
+<div class="view" id="v3"><div id="eodContent"></div></div>
+<div class="view" id="v4">
+  <div class="setgrid">
+    <div class="setcard"><div class="settitle">Estimators</div><div class="setbody" id="estList"></div><div class="addrow"><input class="addinput" id="addEstIn" placeholder="New estimator..."><button class="addbtn" onclick="addMember('est')">Add</button></div></div>
+    <div class="setcard"><div class="settitle">Technicians</div><div class="setbody" id="techList"></div><div class="addrow"><input class="addinput" id="addTechIn" placeholder="New technician..."><button class="addbtn" onclick="addMember('tech')">Add</button></div></div>
+    <div class="setcard"><div class="settitle">Insurers and Referrers</div><div class="setbody" id="insList"></div><div class="addrow"><input class="addinput" id="addInsIn" placeholder="New insurer..."><button class="addbtn" onclick="addIns()">Add</button></div></div>
+    <div class="setcard"><div class="settitle">DVLA Vehicle Lookup</div><div class="setbody"><p>Enter your DVLA Vehicle Enquiry Service API key to enable automatic vehicle data lookup when adding jobs. Get a free key at <b>developer-portal.driver-vehicle-licensing.agency.gov.uk</b></p><label class="flbl" style="display:block;margin-bottom:4px;">API Key</label><div style="display:flex;gap:6px;"><input class="addinput" id="dvlaKeyInput" placeholder="Paste your API key here..." type="password" style="flex:1;font-family:monospace;"><button class="addbtn" onclick="saveDVLAKey()">Save</button></div><div id="dvlaKeyStatus" style="font-size:11px;margin-top:6px;color:#6b7c96;"></div><button class="btn" style="margin-top:4px;font-size:11px;" onclick="clearDVLACache()">Clear Lookup Cache</button></div></div>
+    <div class="setcard"><div class="settitle">Data</div><div class="setbody"><p>Export saves all data to a JSON file. Import restores it.</p><button class="btn gr" onclick="exportData()">Export Data</button><label class="btn" style="cursor:pointer;text-align:center;">Import Data<input type="file" accept=".json" id="importFile" style="display:none;" onchange="importData(event)"></label></div></div>
+    <div class="setcard"><div class="settitle">Danger Zone</div><div class="setbody"><button class="btn dr" onclick="clearJobs()">Clear All Jobs</button><button class="btn dr" onclick="clearActions()">Clear Actions</button><button class="btn dr" onclick="resetAll()">Reset Everything</button></div></div>
+  </div>
+</div>
+<div class="moverlay" id="jobModal">
+  <div class="modal">
+    <div class="mhdr"><div class="mtitle" id="mTitle">Add Job</div><button class="mclose" id="mCloseBtn">X</button></div>
+    <div class="mbody">
+      <div class="msec">Essential Details</div>
+      <div class="frow">
+        <div class="fg" style="max-width:155px;"><label class="flbl">Registration</label><input class="finput" id="fReg" placeholder="AB12 CDE" style="font-size:18px;font-weight:800;letter-spacing:2px;" autocomplete="off" oninput="onRegInput()"></div>
+        <div class="fg"><label class="flbl">Make and Model</label><input class="finput" id="fVeh" placeholder="e.g. Vauxhall Astra"></div>
+      </div>
+      <div id="dvlaRow" style="display:none;">
+        <div class="dvla-row">
+          <button class="dvla-btn" id="dvlaBtn" onclick="lookupDVLA()">Lookup DVLA</button>
+          <span class="dvla-status" id="dvlaStatus" style="display:none;"></span>
+        </div>
+        <div class="dvla-detail" id="dvlaDetail"></div>
+      </div>
+      <div class="fg"><label class="flbl">Stage</label><div class="sselrow" id="sSelRow"></div></div>
+      <div class="fg" id="authSubRow" style="display:none;"><label class="flbl">Auth Sub-Status</label>
+        <select class="fselect" id="fAuthSub">
+          <option value="">Select...</option>
+          <option value="Estimate Sent">Estimate Sent - Awaiting Auth</option>
+          <option value="Supplement Sent">Supplement Sent - Awaiting Response</option>
+          <option value="Engineer Booked">Engineer Inspection Booked</option>
+          <option value="Engineer Overdue">Engineer Report Overdue</option>
+          <option value="Customer Decision">Awaiting Customer Decision</option>
+          <option value="No Response 48h">No Response 48h+</option>
+          <option value="TL Pending">Total Loss Pending</option>
+        </select>
+      </div>
+      <div class="fg"><label class="flbl">Repair Category</label><div class="sselrow" id="catSelRow" style="grid-template-columns:repeat(4,1fr);"></div></div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">Date In</label><input class="finput" type="date" id="fDateIn"></div>
+        <div class="fg"><label class="flbl">ETA</label><input class="finput" type="date" id="fEta"></div>
+      </div>
+      <div class="fg"><label class="flbl">Quick Flags</label>
+        <div class="flagrow">
+          <button class="ftog" data-flag="ch">Credit Hire</button>
+          <button class="ftog" data-flag="supp">Supplement</button>
+          <button class="ftog" data-flag="complaint">Complaint</button>
+          <button class="ftog" data-flag="callback">Callback</button>
+          <button class="ftog" data-flag="tl">Total Loss</button>
+        </div>
+      </div>
+      <div class="msec expand-toggle" id="expandToggle"><span class="etarrow">&#9658;</span> More Detail</div>
+      <div class="expand-body" id="expandBody">
+        <div class="frow">
+          <div class="fg"><label class="flbl">Insurer</label><select class="fselect" id="fIns2"></select></div>
+          <div class="fg"><label class="flbl">Claim Ref</label><input class="finput" id="fRef" placeholder="Claim number"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="flbl">Estimator</label><select class="fselect" id="fEst"></select></div>
+          <div class="fg"><label class="flbl">Technician</label><select class="fselect" id="fTech"></select></div>
+        </div>
+        <div class="fg3">
+          <div class="fg"><label class="flbl">Labour Hrs</label><input class="finput" type="number" id="fLabHrs" placeholder="0.0" min="0" step="0.5"></div>
+          <div class="fg"><label class="flbl">Job Value</label><input class="finput" type="number" id="fValue" placeholder="0" min="0"></div>
+          <div class="fg"><label class="flbl">Hire Days</label><input class="finput" type="number" id="fHireDays" placeholder="0" min="0"></div>
+        </div>
+        <div class="fg"><label class="flbl">Supplement Value</label><input class="finput" type="number" id="fSuppVal" placeholder="0" min="0"></div>
+        <div class="fg"><label class="flbl">More Flags</label>
+          <div class="flagrow">
+            <button class="ftog" data-flag="eng">Engineer</button>
+            <button class="ftog" data-flag="adas">ADAS</button>
+            <button class="ftog" data-flag="excess">Excess</button>
+            <button class="ftog" data-flag="vip">VIP</button>
+            <button class="ftog" data-flag="vuln">Vulnerable</button>
+          </div>
+        </div>
+        <div class="fg"><label class="flbl">Notes</label><textarea class="ftarea" id="fNotes" placeholder="Controller notes, blockers, actions..."></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn dr" id="delBtn" style="margin-right:auto;display:none;">Delete Job</button>
+      <button class="btn" id="cancelBtn">Cancel</button>
+      <button class="btn pr" id="saveBtn">Save Job</button>
+    </div>
+  </div>
+</div>
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-btns"><button class="btn dr" id="confirmOk">Yes, proceed</button><button class="btn" id="confirmCancel">Cancel</button></div>
+  </div>
+</div>
+
+<script>
+var SK="bsc_v9",editId=null,curTab=0,modalStage="authority",modalCat="";
+var REP_CATS=[{id:"strip",label:"Strip",cls:"cat-strip"},{id:"prime",label:"Prime",cls:"cat-prime"},{id:"paint",label:"Paint",cls:"cat-paint"},{id:"blend",label:"Blend",cls:"cat-blend"},{id:"pdr",label:"PDR",cls:"cat-pdr"},{id:"mech",label:"Mech",cls:"cat-mech"},{id:"glass",label:"Glass",cls:"cat-glass"},{id:"tl",label:"TL",cls:"cat-tl"}];
+var STAGES=[{id:"authority",label:"Auth",sc:"sa"},{id:"parts",label:"Parts",sc:"sp"},{id:"repair",label:"Repair",sc:"sr"},{id:"qc",label:"QC",sc:"sq"},{id:"ready",label:"Ready",sc:"srd"},{id:"invoiced",label:"Invoiced",sc:"si"}];
+var STAGE_LABELS={"authority":"Awaiting Auth","parts":"Parts","repair":"In Repair","qc":"QC","ready":"Ready","invoiced":"Invoiced"};
+var DEF_INS=["Admiral","Ageas","Aviva","AXA","Churchill","Covea","Direct Line","Esure","First Central","Hastings Direct","LV","NFU Mutual","RSA","Saga","Swinton","Zurich"];
+var BRIEF=[
+  {id:"prod",title:"Production and Capacity",tasks:[{id:"wip",label:"WIP reviewed — carryovers from yesterday identified",tag:"r"},{id:"tgt",label:"Daily completions target set",tag:null},{id:"bay",label:"Bay utilisation checked — no idle bays",tag:null},{id:"bot",label:"Bottlenecks and stalled jobs flagged",tag:"a"}]},
+  {id:"pts",title:"Parts and Materials",tasks:[{id:"peta",label:"Parts ETAs confirmed for today's starts",tag:"r"},{id:"psh",label:"No unresolved parts shortages holding jobs",tag:"a"},{id:"ppaint",label:"Mixing room stocked",tag:null},{id:"pret",label:"Incorrect or surplus parts returned",tag:null}]},
+  {id:"auth",title:"Authority and Supplements",tasks:[{id:"ach",label:"Outstanding authorities chased with insurers",tag:"r"},{id:"supr",label:"Supplements raised and submitted",tag:"a"},{id:"supa",label:"Supplement authorisations confirmed",tag:"a"},{id:"tlf",label:"Total loss decisions flagged to insurer",tag:"r"},{id:"engb",label:"Engineer appointments confirmed",tag:"b"}]},
+  {id:"ch",title:"Credit Hire",tasks:[{id:"cha",label:"Active credit hire vehicles reviewed",tag:"r"},{id:"chu",label:"Longest-running hire jobs prioritised",tag:"r"},{id:"chs",label:"Courtesy car swaps and extensions logged",tag:"a"}]},
+  {id:"hov",title:"Ready and Handover",tasks:[{id:"rcall",label:"Ready vehicles — customers contacted",tag:"g"},{id:"exc",label:"Excess amounts confirmed before handover",tag:"a"},{id:"invr",label:"Invoices raised and submitted",tag:"g"},{id:"comp",label:"Customer complaints logged and actioned",tag:"r"}]},
+  {id:"team",title:"Team and Attendance",tasks:[{id:"att",label:"Attendance confirmed — all bays covered",tag:null},{id:"ot",label:"Overtime flagged if throughput at risk",tag:"a"},{id:"brf",label:"Team briefed on priority jobs",tag:null}]}
+];
+function defState(){return{date:todayStr(),brief:{tasks:{},att:{},target:8,off:false,col:{},signOffTime:null,openedAt:null},jobs:[],actions:[],set:{est:[{id:"e1",name:"Estimator 1"},{id:"e2",name:"Estimator 2"},{id:"e3",name:"Estimator 3"}],tech:[{id:"t1",name:"Tech 1"},{id:"t2",name:"Tech 2"},{id:"t3",name:"Tech 3"},{id:"t4",name:"Tech 4"},{id:"t5",name:"Tech 5"},{id:"t6",name:"Tech 6"}],ins:DEF_INS.slice()}};}
+function todayStr(){return new Date().toLocaleDateString("en-GB",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});}
+var S;
+try{
+  var r=localStorage.getItem(SK);S=r?JSON.parse(r):defState();
+  if(!S.set)S.set=defState().set;if(!S.actions)S.actions=[];
+  if(!S.set.est)S.set.est=defState().set.est;if(!S.set.tech)S.set.tech=defState().set.tech;if(!S.set.ins)S.set.ins=DEF_INS.slice();
+  if(!S.brief.signOffTime)S.brief.signOffTime=null;if(!S.brief.openedAt)S.brief.openedAt=null;
+  if(S.date!==todayStr()){S.date=todayStr();S.brief.tasks={};S.brief.att={};S.brief.off=false;S.brief.signOffTime=null;S.brief.openedAt=null;S.brief.col={};save();}
+}catch(e2){S=defState();}
+function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e2){}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
+function mk(tag,cls){var n=document.createElement(tag);if(cls)n.className=cls;if(tag==="button")n.type="button";return n;}
+function tx(t){return document.createTextNode(t);}
+function app(p){for(var i=1;i<arguments.length;i++){if(arguments[i])p.appendChild(arguments[i]);}return p;}
+function clr(id){var n=document.getElementById(id);while(n.firstChild)n.removeChild(n.firstChild);return n;}
+function opt(v,l,s){var o=mk("option");o.value=v;o.textContent=l;if(s)o.selected=true;return o;}
+function getAutoFlags(job){
+  var f=[];var days=job.dateIn?Math.floor((Date.now()-new Date(job.dateIn))/86400000):0;
+  var ov=job.eta&&new Date(job.eta)<new Date();
+  if(ov&&job.stage!=="invoiced")f.push({cls:"fauto-ov",label:"OVERDUE"});
+  if((job.hireDays||0)>=5)f.push({cls:"fauto-hire",label:"HIRE "+(job.hireDays)+"d"});
+  if(job.stage==="authority"&&days>=2&&!ov)f.push({cls:"fauto-auth",label:"AUTH 48h+"});
+  return f;
+}
+function scoreJob(job){
+  var days=job.dateIn?Math.floor((Date.now()-new Date(job.dateIn))/86400000):0;
+  var ov=job.eta&&new Date(job.eta)<new Date();
+  var fl=job.flags||[];
+  var hasCH=fl.indexOf("ch")!==-1,hasTL=fl.indexOf("tl")!==-1,hasComp=fl.indexOf("complaint")!==-1;
+  var noResp=job.authSub==="No Response 48h"||job.authSub==="Engineer Overdue";
+  if(ov&&hasCH)return{lv:"crit",sc:100,why:"Overdue + Hire"};
+  if(hasComp)return{lv:"crit",sc:95,why:"Complaint"};
+  if(hasTL)return{lv:"crit",sc:90,why:"Total Loss"};
+  if(ov&&job.stage!=="invoiced")return{lv:"crit",sc:85,why:"ETA Overdue"};
+  if(noResp)return{lv:"crit",sc:82,why:job.authSub};
+  if(job.stage==="authority"&&days>=2)return{lv:"crit",sc:80,why:"Auth 48h+"};
+  if((job.hireDays||0)>=5)return{lv:"warn",sc:75,why:"Hire "+(job.hireDays)+"d"};
+  if(hasCH&&days>=1)return{lv:"warn",sc:70,why:"CH Day "+days};
+  if(fl.indexOf("supp")!==-1)return{lv:"warn",sc:60,why:"Supp Pending"};
+  if(fl.indexOf("callback")!==-1)return{lv:"warn",sc:55,why:"Callback Due"};
+  if(fl.indexOf("eng")!==-1)return{lv:"warn",sc:50,why:"Engineer"};
+  if(fl.indexOf("excess")!==-1)return{lv:"info",sc:35,why:"Excess O/S"};
+  if(job.stage==="ready")return{lv:"info",sc:30,why:"Ready"};
+  return{lv:"ok",sc:10,why:"On Track"};
+}
+function buildChaseItems(jobs){
+  var items=[];
+  jobs.forEach(function(j){
+    if(j.stage==="invoiced")return;
+    var fl=j.flags||[];
+    var days=j.dateIn?Math.floor((Date.now()-new Date(j.dateIn))/86400000):0;
+    var ov=j.eta&&new Date(j.eta)<new Date();
+    var stage=STAGE_LABELS[j.stage]||j.stage;
+    function add(why,lv){items.push({job:j,why:why,lv:lv,stage:stage,days:days});}
+    if(ov)add("ETA overdue — chase completion today","crit");
+    if(j.stage==="authority"&&days>=2)add("Auth held "+days+" days — call insurer","crit");
+    if(j.authSub==="No Response 48h")add("No insurer response 48h+","crit");
+    if(j.authSub==="Engineer Overdue")add("Engineer report overdue","crit");
+    if(fl.indexOf("complaint")!==-1)add("Customer complaint — needs update today","crit");
+    if(fl.indexOf("tl")!==-1)add("Total loss pending — awaiting insurer decision","crit");
+    if((j.hireDays||0)>=5)add("Hire at "+(j.hireDays)+" days — reduce exposure","warn");
+    if(fl.indexOf("ch")!==-1&&days>=3&&(j.hireDays||0)<5)add("Credit hire — day "+days+" in shop","warn");
+    if(fl.indexOf("supp")!==-1)add("Supplement outstanding","warn");
+    if(fl.indexOf("callback")!==-1)add("Callback due — contact customer","warn");
+    if(fl.indexOf("eng")!==-1&&j.stage==="authority")add("Engineer visit — confirm appointment","warn");
+    if(j.stage==="ready"&&days>=1)add("Ready "+days+" day"+(days!==1?"s":"")+" — customer not collected","info");
+    if(fl.indexOf("excess")!==-1&&j.stage==="ready")add("Excess to collect at handover","info");
+  });
+  items.sort(function(a,b){var o={crit:0,warn:1,info:2};return(o[a.lv]||3)-(o[b.lv]||3);});
+  return items;
+}
+function updateChaseBadge(){
+  var items=buildChaseItems(S.jobs);
+  var n=items.filter(function(i){return i.lv==="crit";}).length;
+  var tab=document.getElementById("tabChase");
+  var badge=tab.querySelector(".tab-badge");
+  if(n>0){if(!badge){badge=mk("span","tab-badge");tab.appendChild(badge);}badge.textContent=n;}
+  else{if(badge)badge.parentNode.removeChild(badge);}
+}
+function renderChase(){
+  var container=clr("chaseContent");
+  var items=buildChaseItems(S.jobs);
+  updateChaseBadge();
+  if(!items.length){var e=mk("div","chase-empty");e.textContent="No outstanding actions — board is clear.";container.appendChild(e);return;}
+  var groups={crit:{title:"Critical — Action Now",items:[]},warn:{title:"Warning — Chase Today",items:[]},info:{title:"For Attention",items:[]}};
+  items.forEach(function(it){(groups[it.lv]||groups.info).items.push(it);});
+  ["crit","warn","info"].forEach(function(lv){
+    var g=groups[lv];if(!g.items.length)return;
+    var t=mk("div","chase-sec-title");t.textContent=g.title+" ("+g.items.length+")";container.appendChild(t);
+    var list=mk("div","chase-list");
+    g.items.forEach(function(it){
+      var row=mk("div","chase-row "+lv);
+      var reg=mk("div","chase-reg");reg.textContent=it.job.reg||"?";
+      var why=mk("div","chase-why");why.textContent=it.why;
+      var stage=mk("div","chase-stage");stage.textContent=it.stage;
+      var meta=mk("div","chase-meta");
+      var mp=[];if(it.job.veh)mp.push(it.job.veh);if(it.job.ins)mp.push(it.job.ins);if(it.days)mp.push(it.days+"d");
+      meta.textContent=mp.join(" · ");
+      app(row,reg,why,stage,meta);
+      row.addEventListener("click",function(){openEdit(it.job.id);});
+      list.appendChild(row);
+    });
+    container.appendChild(list);
+  });
+}
+function goTab(idx,el){
+  curTab=idx;
+  document.querySelectorAll(".view").forEach(function(v){v.classList.remove("on");});
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("on");});
+  document.getElementById("v"+idx).classList.add("on");
+  if(el)el.classList.add("on");
+  if(idx===0){renderBrief();renderBriefBanner();}
+  if(idx===1)renderChase();
+  if(idx===2){renderBoard();renderActions();renderUrgStrip();}
+  if(idx===3)renderEOD();
+  if(idx===4)renderSettings();
+}
+function renderHeader(){
+  document.getElementById("todayDate").textContent=todayStr();
+  var jobs=S.jobs;
+  var inv=jobs.filter(function(j){return j.stage==="invoiced";}).length;
+  var ch=jobs.filter(function(j){return(j.flags||[]).indexOf("ch")!==-1;}).length;
+  var ah=jobs.filter(function(j){return j.stage==="authority";}).length;
+  var crit=jobs.filter(function(j){return scoreJob(j).lv==="crit";}).length;
+  var wrap=clr("topStats");
+  function stat(cls,val,label){var d=mk("div","hs"+(cls?" "+cls:""));var b=mk("b");b.textContent=val+" ";app(d,b,tx(label));wrap.appendChild(d);}
+  stat("",jobs.length,"Live");stat("go",inv,"Done");
+  if(crit>0)stat("al",crit,"Critical");if(ah>0)stat("am",ah,"Auth");if(ch>0)stat("al",ch,"Hire");
+  updateChaseBadge();
+}
+function renderUrgStrip(){
+  var jobs=S.jobs;var wrap=clr("urgStrip");
+  var counts={crit:0,warn:0,info:0,ok:0};
+  jobs.forEach(function(j){counts[scoreJob(j).lv]++;});
+  var labels={crit:"Critical",warn:"Warning",info:"Action Needed",ok:"On Track"};
+  var curFilt=document.getElementById("fUrg").value;
+  ["crit","warn","info","ok"].forEach(function(lv){
+    if(!counts[lv])return;
+    var p=mk("div","upill "+lv+(curFilt===lv?" active":""));
+    var dot=mk("div","udot");var sp=mk("span");var b=mk("b");b.textContent=counts[lv];app(sp,b,tx(" "+labels[lv]));app(p,dot,sp);
+    p.addEventListener("click",function(){var f=document.getElementById("fUrg");f.value=f.value===lv?"":lv;renderBoard();renderUrgStrip();});
+    wrap.appendChild(p);
+  });
+  if(!jobs.length){var s=mk("span");s.style.cssText="font-size:13px;color:#8fa0b8;";s.textContent="No jobs on the board yet. Press N to add one.";wrap.appendChild(s);}
+}
+function renderActions(){
+  var container=clr("actionContainer");var actions=S.actions||[];
+  if(!actions.length){var d=mk("div","today-empty");d.textContent="No actions yet.";container.appendChild(d);return;}
+  var list=mk("div","action-list");
+  actions.forEach(function(act,i){
+    var row=mk("div","action-item"+(act.done?" done":""));
+    var dot=mk("div","action-urg "+(act.urg||"a"));
+    var txt=mk("span","action-text");txt.textContent=act.text;
+    var tick=mk("div","action-tick");tick.textContent=act.done?"v":"";
+    tick.addEventListener("click",function(ev){ev.stopPropagation();S.actions[i].done=!S.actions[i].done;save();renderActions();});
+    var del=mk("button","action-del");del.textContent="x";
+    del.addEventListener("click",function(ev){ev.stopPropagation();S.actions.splice(i,1);save();renderActions();});
+    app(row,dot,txt);
+    if(act.reg){var reg=mk("span","action-reg");reg.textContent=act.reg;row.appendChild(reg);}
+    app(row,tick,del);list.appendChild(row);
+  });
+  container.appendChild(list);
+}
+function addAction(){
+  var text=document.getElementById("actionText").value.trim();if(!text)return;
+  var reg=document.getElementById("actionReg").value.trim().toUpperCase();
+  var urg=document.getElementById("actionUrg").value;
+  if(!S.actions)S.actions=[];
+  S.actions.push({id:uid(),text:text,reg:reg||null,urg:urg,done:false});
+  document.getElementById("actionText").value="";document.getElementById("actionReg").value="";
+  save();renderActions();
+}
+function filterJobs(jobs){
+  var srch=document.getElementById("searchBox").value.toLowerCase();
+  var fs=document.getElementById("fStage").value,fu=document.getElementById("fUrg").value;
+  var fi=document.getElementById("fIns").value,ff=document.getElementById("fFlag").value,fc=document.getElementById("fCat").value;
+  if(srch)jobs=jobs.filter(function(j){return(j.reg&&j.reg.toLowerCase().indexOf(srch)!==-1)||(j.veh&&j.veh.toLowerCase().indexOf(srch)!==-1);});
+  if(fs)jobs=jobs.filter(function(j){return j.stage===fs;});
+  if(fu)jobs=jobs.filter(function(j){return scoreJob(j).lv===fu;});
+  if(fi)jobs=jobs.filter(function(j){return j.ins===fi;});
+  if(ff)jobs=jobs.filter(function(j){return(j.flags||[]).indexOf(ff)!==-1;});
+  if(fc)jobs=jobs.filter(function(j){return j.repCat===fc;});
+  return jobs;
+}
+function sortJobs(jobs){
+  var sort=document.getElementById("fSort").value;
+  return jobs.slice().sort(function(a,b){
+    if(sort==="urg")return scoreJob(b).sc-scoreJob(a).sc;
+    if(sort==="days"){var da=a.dateIn?Math.floor((Date.now()-new Date(a.dateIn))/86400000):0,db=b.dateIn?Math.floor((Date.now()-new Date(b.dateIn))/86400000):0;return db-da;}
+    if(sort==="hire")return(b.hireDays||0)-(a.hireDays||0);
+    if(sort==="reg")return(a.reg||"").localeCompare(b.reg||"");
+    return 0;
+  });
+}
+function renderBoard(){
+  var insEl=document.getElementById("fIns"),cur=insEl.value;
+  while(insEl.options.length>1)insEl.remove(1);
+  S.set.ins.forEach(function(x){insEl.appendChild(opt(x,x,x===cur));});
+  var sf=document.getElementById("fStage").value;
+  var show=sf?STAGES.filter(function(s){return s.id===sf;}):STAGES;
+  var all=filterJobs(S.jobs.slice());
+  var container=clr("wipList");
+  show.forEach(function(st){
+    var jobs=sortJobs(all.filter(function(j){return j.stage===st.id;}));
+    var critN=jobs.filter(function(j){return scoreJob(j).lv==="crit";}).length;
+    var hdr=mk("div","wstage-hdr "+st.sc);
+    var title=mk("span","wstage-title");title.textContent=STAGE_LABELS[st.id]||st.label;
+    var cnt=mk("span","wstage-cnt");cnt.textContent=jobs.length+" job"+(jobs.length!==1?"s":"")+(critN?" \u00b7 "+critN+" critical":"");
+    if(critN)cnt.style.color="#c0392b";
+    app(hdr,title,cnt);container.appendChild(hdr);
+    var body=mk("div","wstage-body "+st.sc);
+    if(!jobs.length){var empty=mk("div","wstage-empty");empty.textContent="No jobs";body.appendChild(empty);}
+    else{jobs.forEach(function(j){body.appendChild(makeCard(j));});}
+    container.appendChild(body);
+  });
+}
+function makeCard(job){
+  var urg=scoreJob(job);
+  var uc={crit:"uc",warn:"uw",ok:"uo",info:"ui"};
+  var autoFlags=getAutoFlags(job);
+  var card=mk("div","jcard "+uc[urg.lv]+(autoFlags.length?" auto-flagged":""));
+  var days=job.dateIn?Math.floor((Date.now()-new Date(job.dateIn))/86400000):null;
+  var ov=job.eta&&new Date(job.eta)<new Date();
+  var top=mk("div","jcard-top");
+  var reg=mk("div","jreg");reg.textContent=job.reg||"?";
+  var ub=mk("div","jurg "+uc[urg.lv]);ub.textContent=urg.why;
+  var catDef=job.repCat?REP_CATS.filter(function(c){return c.id===job.repCat;})[0]:null;
+  var catB=mk("div","jcat "+(catDef?catDef.cls:"cat-none"));catB.textContent=catDef?catDef.label:"?";
+  app(top,reg,ub,catB);
+  if(days!==null){var dEl=mk("div","jdays"+(ov?" ov":""));dEl.textContent=(ov?"OVR ":"")+days+"d";top.appendChild(dEl);}
+  card.appendChild(top);
+  if(job.veh||job.ins){
+    var row2=mk("div","jrow2");
+    if(job.veh){var veh=mk("div","jveh");veh.textContent=job.veh;row2.appendChild(veh);}
+    if(job.ins){var ins=mk("div","jins");ins.textContent=job.ins;row2.appendChild(ins);}
+    card.appendChild(row2);
+  }
+  var fl=job.flags||[];
+  var fmap={supp:["fs","SUPP"],eng:["fe","ENG"],adas:["fad","ADAS"],ch:["fc","CH"],excess:["fx","EXCESS"],tl:["ft","TL"],complaint:["fp","COMPL"],callback:["fp","CALL"],vip:["fv","VIP"],vuln:["fv","VULN"]};
+  var hasF=fl.some(function(f){return fmap[f];})||autoFlags.length;
+  if(hasF){
+    var fd=mk("div","jflags");
+    fl.forEach(function(f){if(fmap[f]){var s=mk("span","flag "+fmap[f][0]);s.textContent=fmap[f][1];fd.appendChild(s);}});
+    autoFlags.forEach(function(af){var s=mk("span","flag "+af.cls);s.textContent=af.label;fd.appendChild(s);});
+    card.appendChild(fd);
+  }
+  var detail=mk("div","jcard-detail");
+  if(job.stage==="authority"&&job.authSub){var as=mk("div","jauth");as.textContent=job.authSub;detail.appendChild(as);}
+  var comItems=[];
+  if(job.value)comItems.push({t:"PS"+Number(job.value).toLocaleString(),c:""});
+  if(job.labHrs)comItems.push({t:job.labHrs+"hrs",c:""});
+  if(job.hireDays)comItems.push({t:"Hire: "+job.hireDays+"d",c:(job.hireDays>=5?"c":"w")});
+  if(job.suppVal)comItems.push({t:"Supp: PS"+Number(job.suppVal).toLocaleString(),c:"w"});
+  if(comItems.length){var com=mk("div","jcom");comItems.forEach(function(ci){var s=mk("span","jcom-i"+(ci.c?" "+ci.c:""));s.textContent=ci.t.replace("PS","\u00a3");com.appendChild(s);});detail.appendChild(com);}
+  var estN=(S.set.est.filter(function(x){return x.id===job.estId;})[0]||{}).name||"";
+  var techN=(S.set.tech.filter(function(x){return x.id===job.techId;})[0]||{}).name||"";
+  if(estN||techN){var tm=mk("div","jteam");if(estN){var eb=mk("span","tbadge");eb.textContent=estN;tm.appendChild(eb);}if(techN){var tb2=mk("span","tbadge");tb2.textContent=techN;tm.appendChild(tb2);}detail.appendChild(tm);}
+  if(job.notes){var n=mk("div","jnotes");n.textContent=job.notes;detail.appendChild(n);}
+  if(detail.children.length)card.appendChild(detail);
+  card.addEventListener("click",function(){openEdit(job.id);});
+  return card;
+}
+function openAdd(){
+  editId=null;modalStage="authority";modalCat="";
+  document.getElementById("mTitle").textContent="Add Job";
+  document.getElementById("delBtn").style.display="none";
+  clearModal();fillModal(null);
+  document.getElementById("expandBody").classList.remove("open");
+  document.getElementById("expandToggle").classList.remove("open");
+  document.getElementById("jobModal").classList.add("op");
+  setTimeout(function(){document.getElementById("fReg").focus();},60);
+}
+function openEdit(id){
+  var job=S.jobs.filter(function(j){return j.id===id;})[0];if(!job)return;
+  editId=id;modalStage=job.stage||"authority";modalCat=job.repCat||"";
+  document.getElementById("mTitle").textContent="Edit — "+(job.reg||"Job");
+  document.getElementById("delBtn").style.display="inline-flex";
+  clearModal();fillModal(job);
+  var hasDetail=job.ins||job.ref||job.estId||job.techId||job.labHrs||job.value||job.hireDays||job.suppVal||job.notes||(job.flags||[]).some(function(f){return["eng","adas","excess","vip","vuln"].indexOf(f)!==-1;});
+  if(hasDetail){document.getElementById("expandBody").classList.add("open");document.getElementById("expandToggle").classList.add("open");}
+  else{document.getElementById("expandBody").classList.remove("open");document.getElementById("expandToggle").classList.remove("open");}
+  document.getElementById("jobModal").classList.add("op");
+}
+function closeModal(){document.getElementById("jobModal").classList.remove("op");editId=null;}
+function updateAuthVis(){document.getElementById("authSubRow").style.display=modalStage==="authority"?"block":"none";}
+document.getElementById("expandToggle").addEventListener("click",function(){
+  this.classList.toggle("open");document.getElementById("expandBody").classList.toggle("open");
+});
+function clearModal(){
+  ["fReg","fVeh","fRef","fNotes","fLabHrs","fValue","fHireDays","fSuppVal"].forEach(function(id){document.getElementById(id).value="";});
+  document.querySelectorAll(".ftog").forEach(function(b){b.className="ftog";});
+  document.getElementById("fDateIn").value=new Date().toISOString().split("T")[0];
+  document.getElementById("fEta").value="";document.getElementById("fAuthSub").value="";updateAuthVis();
+  document.getElementById("dvlaRow").style.display="none";
+  document.getElementById("dvlaStatus").style.display="none";
+  document.getElementById("dvlaDetail").innerHTML="";
+}
+function fillModal(job){
+  var ins2=document.getElementById("fIns2");while(ins2.options.length)ins2.remove(0);ins2.appendChild(opt("","Select insurer..."));
+  S.set.ins.forEach(function(x){ins2.appendChild(opt(x,x,job&&job.ins===x));});
+  var estEl=document.getElementById("fEst");while(estEl.options.length)estEl.remove(0);estEl.appendChild(opt("","No estimator"));
+  S.set.est.forEach(function(x){estEl.appendChild(opt(x.id,x.name,job&&job.estId===x.id));});
+  var techEl=document.getElementById("fTech");while(techEl.options.length)techEl.remove(0);techEl.appendChild(opt("","No technician"));
+  S.set.tech.forEach(function(x){techEl.appendChild(opt(x.id,x.name,job&&job.techId===x.id));});
+  var srow=clr("sSelRow");
+  STAGES.forEach(function(st){
+    var b=mk("button","sselbtn"+(modalStage===st.id?" on":""));
+    b.textContent=STAGE_LABELS[st.id]||st.label;
+    b.addEventListener("click",function(){modalStage=st.id;srow.querySelectorAll(".sselbtn").forEach(function(x){x.classList.remove("on");});b.classList.add("on");updateAuthVis();});
+    srow.appendChild(b);
+  });
+  var crow=clr("catSelRow");
+  REP_CATS.forEach(function(cat){
+    var b=mk("button","sselbtn"+(modalCat===cat.id?" on":""));b.textContent=cat.label;b.style.fontSize="11px";
+    b.addEventListener("click",function(){modalCat=modalCat===cat.id?"":cat.id;crow.querySelectorAll(".sselbtn").forEach(function(x){x.classList.remove("on");});if(modalCat)b.classList.add("on");});
+    crow.appendChild(b);
+  });
+  updateAuthVis();
+  if(job){
+    document.getElementById("fReg").value=job.reg||"";document.getElementById("fVeh").value=job.veh||"";
+    document.getElementById("fRef").value=job.ref||"";document.getElementById("fNotes").value=job.notes||"";
+    document.getElementById("fDateIn").value=job.dateIn||"";document.getElementById("fEta").value=job.eta||"";
+    document.getElementById("fLabHrs").value=job.labHrs||"";document.getElementById("fValue").value=job.value||"";
+    document.getElementById("fHireDays").value=job.hireDays||"";document.getElementById("fSuppVal").value=job.suppVal||"";
+    document.getElementById("fAuthSub").value=job.authSub||"";
+    (job.flags||[]).forEach(function(f){var b=document.querySelector(".ftog[data-flag='"+f+"']");if(b)b.className="ftog on-"+f;});
+  }
+}
+document.getElementById("mCloseBtn").addEventListener("click",closeModal);
+document.getElementById("cancelBtn").addEventListener("click",closeModal);
+document.getElementById("jobModal").addEventListener("click",function(ev){if(ev.target===this)closeModal();});
+document.querySelectorAll(".ftog").forEach(function(btn){
+  btn.addEventListener("click",function(){var f=btn.dataset.flag;btn.className=btn.classList.contains("on-"+f)?"ftog":"ftog on-"+f;});
+});
+document.getElementById("saveBtn").addEventListener("click",function(){
+  var reg=document.getElementById("fReg").value.trim().toUpperCase();if(!reg){alert("Registration is required.");return;}
+  var flags=[];document.querySelectorAll(".ftog").forEach(function(b){var f=b.dataset.flag;if(b.classList.contains("on-"+f))flags.push(f);});
+  var d={reg:reg,veh:document.getElementById("fVeh").value.trim(),ins:document.getElementById("fIns2").value,ref:document.getElementById("fRef").value.trim(),estId:document.getElementById("fEst").value,techId:document.getElementById("fTech").value,stage:modalStage,repCat:modalCat,authSub:modalStage==="authority"?document.getElementById("fAuthSub").value:"",flags:flags,notes:document.getElementById("fNotes").value.trim(),dateIn:document.getElementById("fDateIn").value,eta:document.getElementById("fEta").value,labHrs:parseFloat(document.getElementById("fLabHrs").value)||0,value:parseFloat(document.getElementById("fValue").value)||0,hireDays:parseInt(document.getElementById("fHireDays").value)||0,suppVal:parseFloat(document.getElementById("fSuppVal").value)||0};
+  if(editId){var idx=S.jobs.findIndex(function(j){return j.id===editId;});if(idx!==-1)S.jobs[idx]=Object.assign({},S.jobs[idx],d);}
+  else{S.jobs.push(Object.assign({id:uid()},d));}
+  save();closeModal();renderBoard();renderHeader();renderUrgStrip();
+});
+document.getElementById("delBtn").addEventListener("click",function(){
+  if(!editId)return;
+  confirmAction("Delete this job?",function(){S.jobs=S.jobs.filter(function(j){return j.id!==editId;});save();closeModal();renderBoard();renderHeader();renderUrgStrip();});
+});
+document.addEventListener("keydown",function(e){
+  var tag=(document.activeElement||{}).tagName||"";
+  if(["INPUT","TEXTAREA","SELECT"].indexOf(tag)!==-1)return;
+  if(e.key==="n"||e.key==="N"){openAdd();}
+  if(e.key==="Escape"){closeModal();}
+});
+function renderBriefBanner(){
+  var banner=clr("briefBanner");
+  if(S.brief.off){var n=mk("div","brief-signoff-note");n.textContent="Brief signed off"+(S.brief.signOffTime?" at "+S.brief.signOffTime:"")+".";banner.appendChild(n);return;}
+  var now=new Date(),cutoff=new Date();cutoff.setHours(9,0,0,0);
+  if(now>cutoff){var b=mk("div","brief-overdue-banner");b.textContent="Warning: Morning brief not yet signed off and it is past 09:00.";banner.appendChild(b);}
+}
+function renderBrief(){
+  if(!S.brief.openedAt){S.brief.openedAt=new Date().toTimeString().slice(0,5);save();}
+  var grid=clr("briefGrid");
+  BRIEF.forEach(function(sec){
+    var done=sec.tasks.filter(function(t){return S.brief.tasks[t.id];}).length;
+    var allDone=done===sec.tasks.length;
+    var card=mk("div","bcard"+(S.brief.col[sec.id]?" cl":""));
+    var hdr=mk("div","bcardh");
+    var titleEl=mk("span","bctitle");titleEl.textContent=sec.title;
+    var tally=mk("span","btally"+(allDone?" dn":""));tally.textContent=done+"/"+sec.tasks.length;
+    var chev=mk("span","bchev");chev.textContent="v";
+    app(hdr,titleEl,tally,chev);
+    hdr.addEventListener("click",function(){S.brief.col[sec.id]=!S.brief.col[sec.id];save();card.classList.toggle("cl");});
+    var body=mk("div","bbody");
+    sec.tasks.forEach(function(task){
+      var ck=!!S.brief.tasks[task.id];
+      var row=mk("div","btask"+(ck?" ck":""));
+      var box=mk("div","tbox");box.textContent=ck?"v":"";
+      var lbl=mk("span","btlabel");lbl.textContent=task.label;
+      app(row,box,lbl);
+      if(task.tag){var tg=mk("span","btag "+{r:"tr",a:"ta",b:"tb",g:"tg"}[task.tag]);tg.textContent={r:"PRIORITY",a:"CHK",b:"BOOK",g:"OK"}[task.tag];row.appendChild(tg);}
+      row.addEventListener("click",function(){S.brief.tasks[task.id]=!S.brief.tasks[task.id];save();renderBrief();renderSignoff();});
+      body.appendChild(row);
+    });
+    if(sec.id==="team"){
+      var ag=mk("div","attgrid");
+      S.set.est.concat(S.set.tech).forEach(function(m){
+        var st=S.brief.att[m.id]||"u";
+        var el=mk("div","attm"+(st==="p"?" pr":st==="a"?" ab":""));
+        var dot=mk("div","adot");var nm=mk("span");nm.textContent=m.name;app(el,dot,nm);
+        el.addEventListener("click",function(){var c=S.brief.att[m.id]||"u";S.brief.att[m.id]=c==="u"?"p":c==="p"?"a":"u";save();renderBrief();});
+        ag.appendChild(el);
+      });
+      body.appendChild(ag);
+    }
+    if(sec.id==="prod"){
+      var tr=mk("div","targrow");var trlbl=mk("label");trlbl.textContent="Today's Target";
+      var trinput=mk("input");trinput.className="targinput";trinput.type="number";trinput.min="1";trinput.max="99";trinput.value=S.brief.target||8;
+      trinput.addEventListener("change",function(){S.brief.target=parseInt(trinput.value)||8;save();});
+      app(tr,trlbl,trinput);body.appendChild(tr);
+    }
+    app(card,hdr,body);grid.appendChild(card);
+  });
+  renderSignoff();
+}
+function renderSignoff(){
+  var tot=BRIEF.reduce(function(a,s){return a+s.tasks.length;},0);
+  var dn=Object.values(S.brief.tasks).filter(Boolean).length;
+  var el=document.getElementById("soStatus"),btn=document.getElementById("soBtn");
+  if(S.brief.off){
+    el.textContent="Brief signed off"+(S.brief.signOffTime?" at "+S.brief.signOffTime:"");
+    el.className="sostatus dn";btn.textContent="Re-open Brief";
+    btn.onclick=function(){S.brief.off=false;S.brief.signOffTime=null;save();renderBrief();renderBriefBanner();};
+  }else{
+    el.textContent=dn+"/"+tot+" tasks complete";el.className="sostatus";btn.textContent="Sign Off Brief";
+    btn.onclick=function(){S.brief.off=true;S.brief.signOffTime=new Date().toTimeString().slice(0,5);save();renderBrief();renderBriefBanner();};
+  }
+}
+function renderEOD(){
+  var jobs=S.jobs;
+  var inv=jobs.filter(function(j){return j.stage==="invoiced";});
+  var ready=jobs.filter(function(j){return j.stage==="ready";});
+  var auth=jobs.filter(function(j){return j.stage==="authority";});
+  var chA=jobs.filter(function(j){return(j.flags||[]).indexOf("ch")!==-1;});
+  var supp=jobs.filter(function(j){return(j.flags||[]).indexOf("supp")!==-1&&j.stage!=="invoiced";});
+  var ov=jobs.filter(function(j){return j.eta&&new Date(j.eta)<new Date()&&j.stage!=="invoiced";});
+  var tgt=S.brief.target||8;
+  var oldest=jobs.filter(function(j){return j.dateIn&&j.stage!=="invoiced";}).sort(function(a,b){return new Date(a.dateIn)-new Date(b.dateIn);})[0];
+  var oldDays=oldest?Math.floor((Date.now()-new Date(oldest.dateIn))/86400000):0;
+  var totHire=chA.reduce(function(a,j){return a+(j.hireDays||0);},0);
+  var totVal=inv.reduce(function(a,j){return a+(j.value||0);},0);
+  var container=clr("eodContent");
+  var liveJobs=jobs.filter(function(j){return j.stage!=="invoiced";});
+  if(liveJobs.length){
+    var cbd=mk("div","cat-breakdown");
+    var cbtitle=mk("div","cat-breakdown-title");cbtitle.textContent="Live Job Category Breakdown";cbd.appendChild(cbtitle);
+    var cbgrid=mk("div","cat-breakdown-grid");
+    var colMap={strip:"#c0392b",prime:"#7d3c98",paint:"#2471a3",blend:"#1e8449",pdr:"#1e8449",mech:"#d68910",glass:"#2471a3",tl:"#c0392b"};
+    REP_CATS.forEach(function(cat){
+      var cnt=liveJobs.filter(function(j){return j.repCat===cat.id;}).length;if(!cnt)return;
+      var block=mk("div","cat-block"+(cnt>=3?" bottleneck":""));
+      var num=mk("div","cat-block-num");num.style.color=colMap[cat.id]||"#1a2b44";num.textContent=cnt;
+      var lbl=mk("div","cat-block-label");lbl.textContent=cat.label;lbl.style.color=colMap[cat.id]||"#6b7c96";
+      app(block,num,lbl);if(cnt>=3){var warn=mk("div","cat-block-warn");warn.textContent="Bottleneck";block.appendChild(warn);}
+      cbgrid.appendChild(block);
+    });
+    var ucCnt=liveJobs.filter(function(j){return!j.repCat;}).length;
+    if(ucCnt){var ucb=mk("div","cat-block");var ucn=mk("div","cat-block-num");ucn.style.color="#8fa0b8";ucn.textContent=ucCnt;var ucl=mk("div","cat-block-label");ucl.textContent="Uncat";ucl.style.color="#8fa0b8";app(ucb,ucn,ucl);cbgrid.appendChild(ucb);}
+    cbd.appendChild(cbgrid);container.appendChild(cbd);
+  }
+  var insights=[];
+  if(inv.length<tgt)insights.push("Target of "+tgt+" not met — "+inv.length+" invoiced. Shortfall: "+(tgt-inv.length)+".");
+  if(ov.length)insights.push(ov.length+" job"+(ov.length!==1?"s":"")+" past ETA carrying over.");
+  if(oldest)insights.push("Oldest live job: "+(oldest.reg||"?")+" at "+oldDays+" days.");
+  if(totHire)insights.push("Total hire exposure: "+totHire+" days across "+chA.length+" vehicles.");
+  if(totVal)insights.push("Total invoiced value: \u00a3"+totVal.toLocaleString()+".");
+  if(auth.length)insights.push(auth.length+" job"+(auth.length!==1?"s":"")+" awaiting authority — chase tomorrow.");
+  if(insights.length){
+    var ins=mk("div","eod-insight");var insTitle=mk("div","eod-insight-title");insTitle.textContent="Performance Summary";ins.appendChild(insTitle);
+    insights.forEach(function(i){var d=mk("div","eod-insight-item");d.textContent="\u2014 "+i;ins.appendChild(d);});container.appendChild(ins);
+  }
+  var grid=mk("div","eodgrid");
+  function stat(cls,val,label){var d=mk("div","eodstat "+cls);var n=mk("div","eodnum");n.textContent=val;var l=mk("div","eodlbl");l.textContent=label;app(d,n,l);grid.appendChild(d);}
+  stat(inv.length>=tgt?"gn":inv.length>0?"am":"rd",inv.length,"Invoiced");stat("bl",tgt,"Target");
+  stat(auth.length===0?"gn":"rd",auth.length,"Auth Held");stat(chA.length===0?"gn":"am",chA.length,"Credit Hire");
+  stat(supp.length===0?"gn":"am",supp.length,"Supps");stat(ready.length===0?"gn":"am",ready.length,"Not Collected");
+  container.appendChild(grid);
+  function secList(title,list,col){
+    if(!list.length)return;
+    var t=mk("div","eod-stitle");t.textContent=title+" ("+list.length+")";container.appendChild(t);
+    var ul=mk("div","eod-list");
+    list.forEach(function(j){
+      var row=mk("div","eod-row");
+      var reg=mk("div","eod-reg");reg.textContent=j.reg||"?";
+      var info=mk("div","eod-info");info.textContent=(j.veh||"")+(j.ins?" \u00b7 "+j.ins:"");
+      var sb=mk("div","eod-sb");sb.textContent=STAGE_LABELS[j.stage]||j.stage;sb.style.cssText="background:"+col+"20;color:"+col+";border:1px solid "+col+";";
+      app(row,reg,info,sb);
+      var catDef=j.repCat?REP_CATS.filter(function(c){return c.id===j.repCat;})[0]:null;
+      if(catDef){var cb2=mk("div","eod-sb "+catDef.cls);cb2.textContent=catDef.label;row.appendChild(cb2);}
+      var en=(S.set.est.filter(function(x){return x.id===j.estId;})[0]||{}).name||"";
+      var tn=(S.set.tech.filter(function(x){return x.id===j.techId;})[0]||{}).name||"";
+      if(en){var es=mk("span");es.style.cssText="font-size:11px;color:#6b7c96;";es.textContent=en;row.appendChild(es);}
+      if(tn){var ts=mk("span");ts.style.cssText="font-size:11px;color:#6b7c96;";ts.textContent=tn;row.appendChild(ts);}
+      ul.appendChild(row);
+    });
+    container.appendChild(ul);
+  }
+  secList("Invoiced Today",inv,"#27ae60");secList("Ready \u2014 Awaiting Collection",ready,"#f39c12");
+  secList("Held \u2014 Awaiting Authority",auth,"#e74c3c");secList("Credit Hire Active",chA,"#e74c3c");secList("Supplements Outstanding",supp,"#f39c12");
+  var hbox=mk("div","handover-box");
+  var htitle=mk("div","handover-box-title");htitle.textContent="Shift Handover Note";hbox.appendChild(htitle);
+  var hta=mk("textarea","handover-textarea");hta.id="handoverText";hta.readOnly=true;
+  hta.value=buildHandover(jobs,inv,auth,chA,supp,ov,tgt);hbox.appendChild(hta);
+  var hrow=mk("div");hrow.style.cssText="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;";
+  var copyBtn=mk("button","btn or");copyBtn.textContent="Copy Handover";
+  copyBtn.addEventListener("click",function(){hta.select();document.execCommand("copy");copyBtn.textContent="Copied!";setTimeout(function(){copyBtn.textContent="Copy Handover";},2000);});
+  var pdfBtn=mk("button","btn pr");pdfBtn.textContent="Download PDF Report";pdfBtn.addEventListener("click",genPDF);
+  var prBtn=mk("button","btn");prBtn.textContent="Print";prBtn.addEventListener("click",function(){window.print();});
+  app(hrow,copyBtn,pdfBtn,prBtn);hbox.appendChild(hrow);container.appendChild(hbox);
+}
+function buildHandover(jobs,inv,auth,chA,supp,ov,tgt){
+  var lines=[];
+  var pad=function(s,n){s=String(s);while(s.length<n)s+=" ";return s.slice(0,n);};
+  lines.push("BODYSHOP CONTROLLER - SHIFT HANDOVER");
+  lines.push(todayStr());
+  lines.push("Generated: "+new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}));
+  lines.push("");
+  lines.push("=".repeat(42));
+  lines.push("PERFORMANCE SNAPSHOT");
+  lines.push("=".repeat(42));
+  lines.push("Invoiced today:  "+inv.length+" / "+tgt+" target"+(inv.length>=tgt?" (TARGET MET)":" (SHORTFALL "+(tgt-inv.length)+")"));
+  lines.push("Live WIP:        "+jobs.filter(function(j){return j.stage!=="invoiced";}).length+" jobs");
+  lines.push("Auth held:       "+auth.length);lines.push("Credit hire:     "+chA.length);
+  lines.push("Supps o/s:       "+supp.length);lines.push("ETA overdue:     "+ov.length);
+  lines.push("Brief:           "+(S.brief.off?"SIGNED OFF"+(S.brief.signOffTime?" at "+S.brief.signOffTime:""):"NOT SIGNED OFF"));
+  lines.push("");
+  var critJobs=jobs.filter(function(j){return scoreJob(j).lv==="crit"&&j.stage!=="invoiced";});
+  if(critJobs.length){
+    lines.push("=".repeat(42));lines.push("CRITICAL - CHASE FIRST THING");lines.push("=".repeat(42));
+    critJobs.forEach(function(j){
+      var urg=scoreJob(j);var days=j.dateIn?Math.floor((Date.now()-new Date(j.dateIn))/86400000):0;
+      lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+urg.why);
+      if(j.ins)lines.push("  Insurer: "+j.ins+(j.ref?" | Ref: "+j.ref:"")+" | Day "+days);
+      if(j.authSub)lines.push("  Status: "+j.authSub);
+      if(j.notes)lines.push("  Note: "+j.notes);
+    });
+    lines.push("");
+  }
+  if(auth.length){
+    lines.push("=".repeat(42));lines.push("AUTH HELD - CARRY FORWARD");lines.push("=".repeat(42));
+    auth.forEach(function(j){var days=j.dateIn?Math.floor((Date.now()-new Date(j.dateIn))/86400000):0;lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+(j.ins||"-")+" | Day "+days+(j.authSub?" | "+j.authSub:""));});
+    lines.push("");
+  }
+  if(chA.length){
+    lines.push("=".repeat(42));lines.push("CREDIT HIRE EXPOSURE");lines.push("=".repeat(42));
+    chA.sort(function(a,b){return(b.hireDays||0)-(a.hireDays||0);}).forEach(function(j){lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+"Hire: "+(j.hireDays||0)+"d"+(j.ins?" | "+j.ins:""));});
+    lines.push("");
+  }
+  if(ov.length){
+    lines.push("=".repeat(42));lines.push("OVERDUE ETAs - ESCALATE");lines.push("=".repeat(42));
+    ov.forEach(function(j){lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+"ETA: "+j.eta+" | "+(STAGE_LABELS[j.stage]||j.stage));});
+    lines.push("");
+  }
+  if(supp.length){
+    lines.push("=".repeat(42));lines.push("SUPPLEMENTS OUTSTANDING");lines.push("=".repeat(42));
+    supp.forEach(function(j){lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+(j.suppVal?"PS"+Number(j.suppVal).toLocaleString()+" o/s":"-")+(j.ins?" | "+j.ins:""));});
+    lines.push("");
+  }
+  var open=(S.actions||[]).filter(function(a){return!a.done;});
+  if(open.length){
+    lines.push("=".repeat(42));lines.push("OPEN ACTIONS");lines.push("=".repeat(42));
+    open.forEach(function(a){lines.push(({r:"[URGENT]",a:"[NORMAL]",g:"[FYI]  "}[a.urg]||"[NORMAL]")+" "+(a.reg?a.reg+" - ":"")+a.text);});
+    lines.push("");
+  }
+  return lines.join("\n").replace(/PS/g,"\u00a3");
+}
+function exportData(){var blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="bodyshop-controller-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);}
+function importData(ev){var file=ev.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e2){try{var p=JSON.parse(e2.target.result);if(!p.jobs||!p.set){alert("Invalid file.");return;}S=p;if(!S.actions)S.actions=[];save();renderHeader();renderBrief();renderBoard();renderUrgStrip();renderActions();alert("Imported. "+S.jobs.length+" jobs loaded.");}catch(err){alert("Could not read file.");}};reader.readAsText(file);ev.target.value="";}
+function renderSettings(){
+  function mkList(listId,arr,roleClass,roleLabel,type){
+    var el=clr(listId);
+    arr.forEach(function(x,i){
+      var row=mk("div",type==="ins"?"iitem":"mitem");
+      if(type!=="ins"){var role=mk("span","mrole "+roleClass);role.textContent=roleLabel;row.appendChild(role);}
+      var inp=mk("input");inp.className=type==="ins"?"iinput":"mninput";inp.value=x.name||x;
+      inp.addEventListener("change",function(){if(type==="ins")arr[i]=inp.value;else arr[i].name=inp.value;save();});
+      var rm=mk("button","rmv");rm.textContent="x";rm.addEventListener("click",function(){arr.splice(i,1);save();renderSettings();});
+      app(row,inp,rm);el.appendChild(row);
+    });
+  }
+  mkList("estList",S.set.est,"re","Est","est");mkList("techList",S.set.tech,"rt","Tech","tech");mkList("insList",S.set.ins,"","","ins");renderDVLAKeyStatus();
+}
+function addMember(type){var id=type==="est"?"addEstIn":"addTechIn";var nm=document.getElementById(id).value.trim();if(!nm)return;if(type==="est")S.set.est.push({id:uid(),name:nm});else S.set.tech.push({id:uid(),name:nm});document.getElementById(id).value="";save();renderSettings();}
+function addIns(){var nm=document.getElementById("addInsIn").value.trim();if(!nm)return;S.set.ins.push(nm);document.getElementById("addInsIn").value="";save();renderSettings();}
+function confirmAction(msg,cb){var ov=document.getElementById("confirmOverlay");document.getElementById("confirmMsg").textContent=msg;ov.style.display="flex";document.getElementById("confirmOk").onclick=function(){ov.style.display="none";cb();};document.getElementById("confirmCancel").onclick=function(){ov.style.display="none";};}
+function clearJobs(){confirmAction("Clear all jobs? This cannot be undone.",function(){S.jobs=[];save();renderBoard();renderHeader();renderUrgStrip();});}
+function clearActions(){confirmAction("Clear all actions?",function(){S.actions=[];save();renderActions();});}
+function resetAll(){confirmAction("Reset everything? All data will be lost.",function(){S=defState();save();renderHeader();renderBrief();renderBoard();renderUrgStrip();renderActions();goTab(0,document.querySelectorAll(".tab")[0]);});}
+function genPDF(){
+  if(!window.jspdf||!window.jspdf.jsPDF){alert("PDF library not loaded.");return;}
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=14,yPos=0;
+  var C={hdr:[26,43,68],or:[244,121,32],gn:[30,132,73],am:[214,137,16],rd:[192,57,43],bl:[36,113,163]};
+  function hdr(){doc.setFillColor(C.hdr[0],C.hdr[1],C.hdr[2]);doc.rect(0,0,pw,13,"F");doc.setFillColor(C.or[0],C.or[1],C.or[2]);doc.rect(0,13,pw,1.5,"F");doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont("helvetica","bold");doc.text("BODYSHOP CONTROLLER - EOD REPORT",m,8.5);doc.setTextColor(180,190,210);doc.setFont("helvetica","normal");doc.text(S.date,pw-m,8.5,{align:"right"});yPos=20;}
+  function chk(n){if(yPos+n>ph-12){doc.addPage();hdr();}}
+  doc.setFillColor(255,255,255);doc.rect(0,0,pw,ph,"F");
+  doc.setFillColor(C.or[0],C.or[1],C.or[2]);doc.rect(0,0,5,ph,"F");
+  doc.setFillColor(C.hdr[0],C.hdr[1],C.hdr[2]);doc.rect(5,0,pw-5,60,"F");
+  doc.setTextColor(C.or[0],C.or[1],C.or[2]);doc.setFontSize(26);doc.setFont("helvetica","bold");doc.text("END OF DAY",m+5,34);
+  doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont("helvetica","normal");doc.text("Bodyshop Controller Report",m+5,44);
+  doc.setTextColor(180,190,210);doc.setFontSize(9);doc.text(S.date,m+5,52);
+  var jobs=S.jobs,inv=jobs.filter(function(j){return j.stage==="invoiced";}),ready=jobs.filter(function(j){return j.stage==="ready";}),auth=jobs.filter(function(j){return j.stage==="authority";}),chA=jobs.filter(function(j){return(j.flags||[]).indexOf("ch")!==-1;}),supp=jobs.filter(function(j){return(j.flags||[]).indexOf("supp")!==-1&&j.stage!=="invoiced";}),tgt=S.brief.target||8;
+  var stats=[{label:"Invoiced",val:inv.length,col:inv.length>=tgt?C.gn:inv.length>0?C.am:C.rd},{label:"Target",val:tgt,col:C.bl},{label:"Auth Held",val:auth.length,col:auth.length===0?C.gn:C.rd},{label:"Credit Hire",val:chA.length,col:chA.length===0?C.gn:C.am},{label:"Supps",val:supp.length,col:supp.length===0?C.gn:C.am},{label:"Not Collected",val:ready.length,col:ready.length===0?C.gn:C.am}];
+  var bw=(pw-m*2-5-10)/3,bh=22,bx=m+5,by=62;
+  stats.forEach(function(st,i){var cx=i%3,cy=Math.floor(i/3),bxn=bx+cx*(bw+5),byn=by+cy*(bh+5);doc.setFillColor(247,248,250);doc.roundedRect(bxn,byn,bw,bh,2,2,"F");doc.setFillColor(st.col[0],st.col[1],st.col[2]);doc.roundedRect(bxn,byn,3,bh,1,1,"F");doc.setTextColor(st.col[0],st.col[1],st.col[2]);doc.setFontSize(16);doc.setFont("helvetica","bold");doc.text(String(st.val),bxn+bw/2,byn+11,{align:"center"});doc.setTextColor(107,124,150);doc.setFontSize(7);doc.setFont("helvetica","normal");doc.text(st.label.toUpperCase(),bxn+bw/2,byn+18,{align:"center"});});
+  var tot=BRIEF.reduce(function(a,s){return a+s.tasks.length;},0),dn=Object.values(S.brief.tasks).filter(Boolean).length,briefY=by+2*(bh+5)+8,briefC=S.brief.off?C.gn:C.am;
+  doc.setFillColor(briefC[0],briefC[1],briefC[2]);doc.roundedRect(bx,briefY,pw-m*2-5,9,2,2,"F");doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont("helvetica","bold");doc.text((S.brief.off?"Brief: SIGNED OFF":"Brief: NOT SIGNED OFF")+" ("+dn+"/"+tot+")",bx+(pw-m*2-5)/2,briefY+6,{align:"center"});
+  doc.addPage();hdr();
+  function drawSec(title,list,acol){
+    if(!list.length)return;chk(18);
+    doc.setFillColor(acol[0],acol[1],acol[2]);doc.rect(m,yPos,pw-m*2,0.7,"F");
+    doc.setTextColor(acol[0],acol[1],acol[2]);doc.setFontSize(9);doc.setFont("helvetica","bold");doc.text(title.toUpperCase()+" ("+list.length+")",m,yPos+5);yPos+=9;
+    var rows=list.map(function(j){var en=(S.set.est.filter(function(x){return x.id===j.estId;})[0]||{}).name||"-",tn=(S.set.tech.filter(function(x){return x.id===j.techId;})[0]||{}).name||"-",dy=j.dateIn?Math.floor((Date.now()-new Date(j.dateIn))/86400000)+"d":"-",urg=scoreJob(j),catDef=j.repCat?REP_CATS.filter(function(c){return c.id===j.repCat;})[0]:null;return[j.reg||"-",j.veh||"-",j.ins||"-",en,tn,STAGE_LABELS[j.stage]||j.stage,catDef?catDef.label:"-",dy,urg.why,(j.hireDays||0)+"d"];});
+    doc.autoTable({startY:yPos,margin:{left:m,right:m},head:[["Reg","Vehicle","Insurer","Est","Tech","Stage","Cat","Days","Status","Hire"]],body:rows,styles:{fontSize:7,cellPadding:2,fillColor:[255,255,255],textColor:[26,43,68],lineColor:[209,217,230],lineWidth:0.2},headStyles:{fillColor:[26,43,68],textColor:[255,255,255],fontStyle:"bold",fontSize:7},alternateRowStyles:{fillColor:[247,248,250]},columnStyles:{0:{fontStyle:"bold",cellWidth:18},5:{textColor:acol},7:{cellWidth:10}},didDrawPage:function(data){hdr();yPos=data.cursor.y+4;}});
+    yPos=doc.lastAutoTable.finalY+7;
+  }
+  drawSec("Invoiced Today",inv,C.gn);drawSec("Ready - Awaiting Collection",ready,C.am);drawSec("Held - Awaiting Authority",auth,C.rd);drawSec("Credit Hire Active",chA,C.rd);drawSec("Supplements Outstanding",supp,C.am);drawSec("All Live Jobs",jobs.slice().sort(function(a,b){return scoreJob(b).sc-scoreJob(a).sc;}),C.bl);
+  var pg=doc.internal.getNumberOfPages();for(var i=1;i<=pg;i++){doc.setPage(i);doc.setFillColor(240,242,245);doc.rect(0,ph-10,pw,10,"F");doc.setTextColor(107,124,150);doc.setFontSize(7);doc.setFont("helvetica","normal");doc.text("Bodyshop Controller",m,ph-4);doc.text("Page "+i+" of "+pg,pw-m,ph-4,{align:"right"});}
+  doc.save("EOD-Report-"+new Date().toISOString().slice(0,10)+".pdf");
+}
+
+/* ────────────────────────────────────────────────
+   DVLA VEHICLE LOOKUP
+──────────────────────────────────────────────── */
+var DVLA_KEY_SK = 'bsc_dvla_key';
+var DVLA_CACHE_SK = 'bsc_dvla_cache';
+
+function getDVLAKey(){return localStorage.getItem(DVLA_KEY_SK)||'';}
+function getDVLACache(){try{return JSON.parse(localStorage.getItem(DVLA_CACHE_SK)||'{}');}catch(e){return {};}}
+function saveDVLACache(cache){try{localStorage.setItem(DVLA_CACHE_SK,JSON.stringify(cache));}catch(e){}}
+
+function saveDVLAKey(){
+  var key=document.getElementById('dvlaKeyInput').value.trim();
+  if(!key){alert('Please paste your API key first.');return;}
+  localStorage.setItem(DVLA_KEY_SK,key);
+  var st=document.getElementById('dvlaKeyStatus');
+  st.textContent='API key saved. It will be used automatically when adding jobs.';
+  st.style.color='#1e8449';
+  document.getElementById('dvlaKeyInput').value='';
+}
+
+function clearDVLACache(){
+  localStorage.removeItem(DVLA_CACHE_SK);
+  var st=document.getElementById('dvlaKeyStatus');
+  st.textContent='Lookup cache cleared.';
+  st.style.color='#6b7c96';
+}
+
+function onRegInput(){
+  var reg=document.getElementById('fReg').value.trim().toUpperCase().replace(/\s/g,'');
+  var row=document.getElementById('dvlaRow');
+  var btn=document.getElementById('dvlaBtn');
+  /* UK reg roughly 2-7 alphanumeric chars */
+  if(reg.length>=2&&getDVLAKey()){
+    row.style.display='block';
+    /* check cache first */
+    var cache=getDVLACache();
+    if(cache[reg]){
+      populateDVLAResult(cache[reg],true);
+    } else {
+      document.getElementById('dvlaStatus').style.display='none';
+      document.getElementById('dvlaDetail').innerHTML='';
+      btn.disabled=false;
+    }
+  } else {
+    row.style.display='none';
+  }
+}
+
+function lookupDVLA(){
+  var reg=document.getElementById('fReg').value.trim().toUpperCase().replace(/\s/g,'');
+  if(!reg){return;}
+  var key=getDVLAKey();
+  if(!key){alert('No DVLA API key found. Please add it in Settings.');return;}
+
+  var btn=document.getElementById('dvlaBtn');
+  var statusEl=document.getElementById('dvlaStatus');
+  var detailEl=document.getElementById('dvlaDetail');
+
+  btn.disabled=true;
+  statusEl.style.display='inline-block';
+  statusEl.className='dvla-status spin';
+  statusEl.textContent='Looking up '+reg+'...';
+  detailEl.innerHTML='';
+
+  /* Route through corsproxy.io to bypass DVLA CORS restriction in browser.
+     Falls back to allorigins.win if first proxy fails. */
+  var DVLA_URL='https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles';
+  var PROXY='https://corsproxy.io/?url='+encodeURIComponent(DVLA_URL);
+
+  function doFetch(url){
+    return fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key},
+      body:JSON.stringify({registrationNumber:reg})
+    });
+  }
+
+  doFetch(PROXY)
+  .catch(function(){
+    /* First proxy failed — try fallback */
+    var FALLBACK='https://api.allorigins.win/raw?url='+encodeURIComponent(DVLA_URL);
+    return doFetch(FALLBACK);
+  })
+  .then(function(res){
+    if(!res.ok){return res.json().then(function(e){throw new Error(e.errors&&e.errors[0]?e.errors[0].detail:'HTTP '+res.status);});}
+    return res.json();
+  })
+  .then(function(data){
+    if(data.errors&&data.errors[0]){throw new Error(data.errors[0].detail||'DVLA error');}
+    var cache=getDVLACache();
+    cache[reg]=data;
+    saveDVLACache(cache);
+    populateDVLAResult(data,false);
+    btn.disabled=false;
+  })
+  .catch(function(err){
+    statusEl.className='dvla-status err';
+    statusEl.textContent='Lookup failed: '+err.message;
+    btn.disabled=false;
+  });
+}
+
+function populateDVLAResult(data,fromCache){
+  var statusEl=document.getElementById('dvlaStatus');
+  var detailEl=document.getElementById('dvlaDetail');
+  detailEl.innerHTML='';
+
+  var make=data.make?capitalise(data.make):'';
+  var model=data.model?capitalise(data.model):'';
+  var colour=data.colour?capitalise(data.colour):'';
+  var year=data.yearOfManufacture||'';
+  var fuel=data.fuelType?capitalise(data.fuelType):'';
+  var engine=data.engineCapacity?Math.round(data.engineCapacity/100)/10+'L':'';
+  var co2=data.co2Emissions?data.co2Emissions+'g/km CO2':'';
+  var motExp=data.motExpiryDate||'';
+  var taxDue=data.taxDueDate||'';
+  var euroStatus=data.euroStatus||'';
+  var firstReg=data.monthOfFirstRegistration||'';
+  var bodyType=data.bodyType?capitalise(data.bodyType):'';
+
+  /* Auto-fill Make and Model field — now includes model name */
+  var vehStr='';
+  if(make){vehStr+=make;}
+  if(model){vehStr+=' '+model;}
+  if(colour){vehStr+=' '+colour;}
+  if(year){vehStr+=' ('+year+')';}
+  if(document.getElementById('fVeh').value===''){
+    document.getElementById('fVeh').value=vehStr.trim();
+  }
+
+  statusEl.style.display='inline-block';
+  statusEl.className='dvla-status ok';
+  statusEl.textContent=(fromCache?'Cached: ':'')+make+(model?' '+model:'')+(year?' '+year:'')+(colour?' \u00b7 '+colour:'');
+
+  /* Pill details */
+  function pill(text,cls){
+    var p=document.createElement('span');
+    p.className='dvla-pill'+(cls?' '+cls:'');
+    p.textContent=text;
+    detailEl.appendChild(p);
+  }
+
+  if(fuel){var isEV=fuel.toUpperCase().indexOf('ELECTRIC')!==-1;pill(fuel,isEV?'ev':'');}
+  if(engine)pill(engine);
+  if(bodyType)pill(bodyType);
+  if(euroStatus)pill(euroStatus);
+  if(co2)pill(co2);
+  if(firstReg)pill('First reg: '+firstReg);
+  if(motExp){
+    var motDate=new Date(motExp);
+    var motOv=motDate<new Date();
+    pill('MOT: '+motExp,motOv?'hi':'');
+  }
+  if(taxDue){
+    var taxDate=new Date(taxDue);
+    var taxOv=taxDate<new Date();
+    pill('Tax: '+taxDue,taxOv?'hi':'');
+  }
+
+  /* Auto-append warnings to Notes if MOT or tax is expired */
+  var warnings=[];
+  if(motExp&&new Date(motExp)<new Date()){warnings.push('\u26a0 MOT expired '+motExp);}
+  if(taxDue&&new Date(taxDue)<new Date()){warnings.push('\u26a0 Vehicle tax expired '+taxDue);}
+  if(warnings.length){
+    var notesEl=document.getElementById('fNotes');
+    var existing=notesEl.value.trim();
+    var warnText=warnings.join(' | ');
+    if(existing.indexOf('MOT expired')===-1&&existing.indexOf('tax expired')===-1){
+      notesEl.value=(existing?existing+'\n':'')+warnText;
+      document.getElementById('expandBody').classList.add('open');
+      document.getElementById('expandToggle').classList.add('open');
+    }
+  }
+}
+
+function capitalise(str){
+  if(!str)return '';
+  return str.charAt(0).toUpperCase()+str.slice(1).toLowerCase();
+}
+
+/* Pre-fill API key field in settings if key exists */
+function renderDVLAKeyStatus(){
+  var key=getDVLAKey();
+  var st=document.getElementById('dvlaKeyStatus');
+  if(!st)return;
+  if(key){
+    st.textContent='API key is saved (ends: ...'+key.slice(-6)+').';
+    st.style.color='#1e8449';
+  } else {
+    st.textContent='No API key saved yet.';
+    st.style.color='#8fa0b8';
+  }
+}
+
+renderHeader();renderBrief();renderBriefBanner();renderBoard();renderUrgStrip();renderActions();
+</script>
+</body>
+</html>
