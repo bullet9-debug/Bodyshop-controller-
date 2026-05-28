@@ -6,6 +6,7 @@
 <title>Bodyshop Controller</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:100vh;}
@@ -296,6 +297,7 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
   <div class="logo">BS<br>CTRL</div>
   <div class="apptitle">Bodyshop <span>Controller</span></div>
   <div class="topstats" id="topStats"></div>
+  <div id="syncStatus" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:3px;background:#f0f2f5;border:1px solid #d1d9e6;color:#6b7c96;white-space:nowrap;flex-shrink:0;">⏳ Connecting...</div>
   <div class="tabs">
     <button class="tab on" onclick="goTab(0,this)">Morning Brief</button>
     <button class="tab" onclick="goTab(1,this)" id="tabChase">Chase List</button>
@@ -478,6 +480,27 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
 </div>
 
 <script>
+/* ── Supabase config ── */
+var SUPA_URL = 'https://hlqoiypqgjetrsmeamki.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhscW9peXBxZ2pldHJzbWVhbWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5Njg0OTAsImV4cCI6MjA5NTU0NDQ5MH0.8U61pmkwz3na4pPERPpLPWxrC65Ed8BQs6aZjiz50yk';
+var WORKSHOP_ID = 'workshop_main';
+var supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+var _saveTimer = null;
+var _syncChannel = null;
+
+function setSyncStatus(state, msg) {
+  var el = document.getElementById('syncStatus');
+  if (!el) return;
+  var styles = {
+    ok:      'background:rgba(39,174,96,0.1);border:1px solid #27ae60;color:#1e8449;',
+    saving:  'background:rgba(244,121,32,0.08);border:1px solid #f47920;color:#c95e00;',
+    error:   'background:rgba(231,76,60,0.08);border:1px solid #e74c3c;color:#c0392b;',
+    loading: 'background:#f0f2f5;border:1px solid #d1d9e6;color:#6b7c96;'
+  };
+  el.style.cssText = 'font-size:11px;font-weight:700;padding:3px 9px;border-radius:3px;white-space:nowrap;flex-shrink:0;' + (styles[state] || styles.loading);
+  el.textContent = msg;
+}
+
 var SK="bsc_v9",editId=null,curTab=0,modalStage="authority",modalCat="";
 var REP_CATS=[{id:"strip",label:"Strip",cls:"cat-strip"},{id:"prime",label:"Prime",cls:"cat-prime"},{id:"paint",label:"Paint",cls:"cat-paint"},{id:"blend",label:"Blend",cls:"cat-blend"},{id:"pdr",label:"PDR",cls:"cat-pdr"},{id:"mech",label:"Mech",cls:"cat-mech"},{id:"glass",label:"Glass",cls:"cat-glass"},{id:"tl",label:"TL",cls:"cat-tl"}];
 var STAGES=[{id:"authority",label:"Auth",sc:"sa"},{id:"parts",label:"Parts",sc:"sp"},{id:"repair",label:"Repair",sc:"sr"},{id:"qc",label:"QC",sc:"sq"},{id:"ready",label:"Ready",sc:"srd"},{id:"invoiced",label:"Invoiced",sc:"si"}];
@@ -493,15 +516,97 @@ var BRIEF=[
 ];
 function defState(){return{date:todayStr(),brief:{tasks:{},att:{},target:8,off:false,col:{},signOffTime:null,openedAt:null},jobs:[],actions:[],set:{est:[{id:"e1",name:"Estimator 1"},{id:"e2",name:"Estimator 2"},{id:"e3",name:"Estimator 3"}],tech:[{id:"t1",name:"Tech 1"},{id:"t2",name:"Tech 2"},{id:"t3",name:"Tech 3"},{id:"t4",name:"Tech 4"},{id:"t5",name:"Tech 5"},{id:"t6",name:"Tech 6"}],ins:DEF_INS.slice()}};}
 function todayStr(){return new Date().toLocaleDateString("en-GB",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});}
-var S;
-try{
-  var r=localStorage.getItem(SK);S=r?JSON.parse(r):defState();
-  if(!S.set)S.set=defState().set;if(!S.actions)S.actions=[];
-  if(!S.set.est)S.set.est=defState().set.est;if(!S.set.tech)S.set.tech=defState().set.tech;if(!S.set.ins)S.set.ins=DEF_INS.slice();
-  if(!S.brief.signOffTime)S.brief.signOffTime=null;if(!S.brief.openedAt)S.brief.openedAt=null;
-  if(S.date!==todayStr()){S.date=todayStr();S.brief.tasks={};S.brief.att={};S.brief.off=false;S.brief.signOffTime=null;S.brief.openedAt=null;S.brief.col={};save();}
-}catch(e2){S=defState();}
-function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e2){}}
+
+var S = defState();
+
+function applyState(data) {
+  S = data;
+  if(!S.set)S.set=defState().set;
+  if(!S.actions)S.actions=[];
+  if(!S.set.est)S.set.est=defState().set.est;
+  if(!S.set.tech)S.set.tech=defState().set.tech;
+  if(!S.set.ins)S.set.ins=DEF_INS.slice();
+  if(!S.brief)S.brief=defState().brief;
+  if(!S.brief.signOffTime)S.brief.signOffTime=null;
+  if(!S.brief.openedAt)S.brief.openedAt=null;
+  if(S.date!==todayStr()){
+    S.date=todayStr();S.brief.tasks={};S.brief.att={};
+    S.brief.off=false;S.brief.signOffTime=null;S.brief.openedAt=null;S.brief.col={};
+  }
+}
+
+function refreshAll() {
+  renderHeader();renderBrief();renderBriefBanner();renderBoard();renderUrgStrip();renderActions();
+  if(curTab===1)renderChase();
+  if(curTab===3)renderEOD();
+  if(curTab===4)renderSettings();
+}
+
+async function loadFromSupabase() {
+  setSyncStatus('loading','⏳ Loading...');
+  try {
+    var res = await supabase.from('workshop_state').select('data').eq('id', WORKSHOP_ID).single();
+    if (res.error) {
+      if (res.error.code === 'PGRST116') {
+        // Row doesn't exist yet — insert default
+        var def = defState();
+        var ins = await supabase.from('workshop_state').insert({id: WORKSHOP_ID, data: def});
+        if (ins.error) throw ins.error;
+        applyState(def);
+      } else {
+        throw res.error;
+      }
+    } else {
+      applyState(res.data.data);
+    }
+    setSyncStatus('ok','✓ Synced');
+    refreshAll();
+    subscribeToChanges();
+  } catch(e) {
+    setSyncStatus('error','⚠ Offline — local only');
+    // Fall back to localStorage
+    try {
+      var r = localStorage.getItem(SK);
+      if (r) applyState(JSON.parse(r));
+    } catch(e2) {}
+    refreshAll();
+  }
+}
+
+function save() {
+  // Always write to localStorage as backup
+  try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e) {}
+  // Debounced Supabase write
+  if (_saveTimer) clearTimeout(_saveTimer);
+  setSyncStatus('saving','↑ Saving...');
+  _saveTimer = setTimeout(async function() {
+    try {
+      var res = await supabase.from('workshop_state').upsert({id: WORKSHOP_ID, data: S, updated_at: new Date().toISOString()});
+      if (res.error) throw res.error;
+      setSyncStatus('ok','✓ Synced');
+    } catch(e) {
+      setSyncStatus('error','⚠ Save failed');
+    }
+  }, 600);
+}
+
+function subscribeToChanges() {
+  if (_syncChannel) supabase.removeChannel(_syncChannel);
+  _syncChannel = supabase
+    .channel('workshop-sync')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'workshop_state',
+      filter: 'id=eq.' + WORKSHOP_ID
+    }, function(payload) {
+      if (!payload.new || !payload.new.data) return;
+      applyState(payload.new.data);
+      setSyncStatus('ok','✓ Synced');
+      refreshAll();
+    })
+    .subscribe();
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function mk(tag,cls){var n=document.createElement(tag);if(cls)n.className=cls;if(tag==="button")n.type="button";return n;}
 function tx(t){return document.createTextNode(t);}
@@ -1296,7 +1401,7 @@ function renderDVLAKeyStatus(){
   }
 }
 
-renderHeader();renderBrief();renderBriefBanner();renderBoard();renderUrgStrip();renderActions();
+loadFromSupabase();
 </script>
 </body>
 </html>
