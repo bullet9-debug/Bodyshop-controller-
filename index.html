@@ -293,6 +293,23 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
 </style>
 </head>
 <body>
+
+<!-- PIN LOCK SCREEN -->
+<div id="pinOverlay" style="display:none;position:fixed;inset:0;background:#1a2b44;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+  <div style="background:#f47920;color:#fff;font-weight:900;font-size:13px;letter-spacing:2px;padding:6px 14px;">BS CTRL</div>
+  <div style="color:#fff;font-size:22px;font-weight:700;">Bodyshop <span style="color:#f47920;">Controller</span></div>
+  <div style="color:#8fa0b8;font-size:13px;">Enter workshop PIN to continue</div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:280px;">
+    <input id="pinInput" type="password" maxlength="10" placeholder="Enter PIN" autocomplete="off"
+      style="width:100%;padding:12px 14px;font-size:20px;text-align:center;letter-spacing:6px;border:2px solid #2e4060;border-radius:4px;background:#243552;color:#fff;outline:none;"
+      onkeydown="if(event.key==='Enter')checkPin()">
+    <button onclick="checkPin()"
+      style="width:100%;padding:11px;background:#f47920;border:none;color:#fff;font-size:15px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:1px;">Unlock</button>
+    <div id="pinError" style="color:#e74c3c;font-size:12px;font-weight:700;min-height:16px;"></div>
+  </div>
+</div>
+
+<div id="appShell" style="display:none;">
 <div class="topbar">
   <div class="logo">BS<br>CTRL</div>
   <div class="apptitle">Bodyshop <span>Controller</span></div>
@@ -478,6 +495,7 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
     <div class="confirm-btns"><button class="btn dr" id="confirmOk">Yes, proceed</button><button class="btn" id="confirmCancel">Cancel</button></div>
   </div>
 </div>
+</div><!-- /appShell -->
 
 <script>
 /* ── Supabase config ── */
@@ -608,6 +626,8 @@ function subscribeToChanges() {
     .subscribe();
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
+function fmtDate(iso){if(!iso)return'';var p=iso.split('-');if(p.length!==3)return iso;return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
+
 function mk(tag,cls){var n=document.createElement(tag);if(cls)n.className=cls;if(tag==="button")n.type="button";return n;}
 function tx(t){return document.createTextNode(t);}
 function app(p){for(var i=1;i<arguments.length;i++){if(arguments[i])p.appendChild(arguments[i]);}return p;}
@@ -1135,7 +1155,7 @@ function buildHandover(jobs,inv,auth,chA,supp,ov,tgt){
   }
   if(ov.length){
     lines.push("=".repeat(42));lines.push("OVERDUE ETAs - ESCALATE");lines.push("=".repeat(42));
-    ov.forEach(function(j){lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+"ETA: "+j.eta+" | "+(STAGE_LABELS[j.stage]||j.stage));});
+    ov.forEach(function(j){lines.push(pad(j.reg||"?",10)+pad(j.veh||"",22)+"ETA: "+fmtDate(j.eta)+" | "+(STAGE_LABELS[j.stage]||j.stage));});
     lines.push("");
   }
   if(supp.length){
@@ -1358,18 +1378,18 @@ function populateDVLAResult(data,fromCache){
   if(motExp){
     var motDate=new Date(motExp);
     var motOv=motDate<new Date();
-    pill('MOT: '+motExp,motOv?'hi':'');
+    pill('MOT: '+fmtDate(motExp),motOv?'hi':'');
   }
   if(taxDue){
     var taxDate=new Date(taxDue);
     var taxOv=taxDate<new Date();
-    pill('Tax: '+taxDue,taxOv?'hi':'');
+    pill('Tax: '+fmtDate(taxDue),taxOv?'hi':'');
   }
 
   /* Auto-append warnings to Notes if MOT or tax is expired */
   var warnings=[];
-  if(motExp&&new Date(motExp)<new Date()){warnings.push('\u26a0 MOT expired '+motExp);}
-  if(taxDue&&new Date(taxDue)<new Date()){warnings.push('\u26a0 Vehicle tax expired '+taxDue);}
+  if(motExp&&new Date(motExp)<new Date()){warnings.push('\u26a0 MOT expired '+fmtDate(motExp));}
+  if(taxDue&&new Date(taxDue)<new Date()){warnings.push('\u26a0 Vehicle tax expired '+fmtDate(taxDue));}
   if(warnings.length){
     var notesEl=document.getElementById('fNotes');
     var existing=notesEl.value.trim();
@@ -1401,7 +1421,36 @@ function renderDVLAKeyStatus(){
   }
 }
 
-loadFromSupabase();
+/* ── PIN GATE ── */
+var WORKSHOP_PIN = '1234'; // Change this to your desired PIN
+
+function checkPin() {
+  var entered = document.getElementById('pinInput').value;
+  if (entered === WORKSHOP_PIN) {
+    sessionStorage.setItem('bsc_auth', '1');
+    document.getElementById('pinOverlay').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+    loadFromSupabase();
+  } else {
+    var err = document.getElementById('pinError');
+    err.textContent = 'Incorrect PIN — try again';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+    setTimeout(function(){ err.textContent = ''; }, 2500);
+  }
+}
+
+/* Boot — show PIN screen or app depending on session */
+(function(){
+  if (sessionStorage.getItem('bsc_auth') === '1') {
+    document.getElementById('pinOverlay').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+    loadFromSupabase();
+  } else {
+    document.getElementById('pinOverlay').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('pinInput').focus(); }, 100);
+  }
+})();
 </script>
 </body>
 </html>
