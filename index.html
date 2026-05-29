@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -119,6 +119,8 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
 .jins{font-size:10px;font-weight:700;color:#8fa0b8;}
 .jdays{font-size:10px;font-weight:700;color:#6b7c96;background:#f0f2f5;border-radius:2px;padding:1px 4px;border:1px solid #d1d9e6;white-space:nowrap;margin-left:auto;}
 .jdays.ov{color:#c0392b;background:rgba(231,76,60,0.08);border-color:#e74c3c;}
+.jdays.td{color:#c95e00;background:rgba(244,121,32,0.1);border-color:#f47920;}
+.jdays.sn{color:#2471a3;background:rgba(52,152,219,0.08);border-color:#3498db;}
 .jflags{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:2px;}
 .flag{font-size:9px;font-weight:800;padding:2px 4px;border-radius:2px;text-transform:uppercase;}
 .fs{background:rgba(243,156,18,0.1);color:#d68910;border:1px solid #f39c12;}
@@ -132,6 +134,8 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
 .fauto-ov{background:rgba(231,76,60,0.1);color:#c0392b;border:1px dashed #e74c3c;}
 .fauto-hire{background:rgba(243,156,18,0.1);color:#d68910;border:1px dashed #f39c12;}
 .fauto-auth{background:rgba(231,76,60,0.08);color:#c0392b;border:1px dashed #e74c3c;}
+.fauto-today{background:rgba(244,121,32,0.15);color:#c95e00;border:1px dashed #f47920;}
+.fauto-soon{background:rgba(52,152,219,0.1);color:#2471a3;border:1px dashed #3498db;}
 .jcard-detail{display:none;margin-top:5px;border-top:1px solid #edf0f4;padding-top:5px;}
 .jcard:hover .jcard-detail,.jcard.pinned .jcard-detail{display:block;}
 .jauth{display:inline-block;font-size:10px;padding:2px 6px;border-radius:2px;margin-bottom:3px;background:rgba(243,156,18,0.08);color:#d68910;border:1px dashed #f39c12;}
@@ -272,6 +276,13 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
 .ftog.on-vip{background:rgba(155,89,182,0.1);border-color:#9b59b6;color:#7d3c98;}
 .ftog.on-vuln{background:rgba(52,152,219,0.1);border-color:#3498db;color:#2471a3;}
 .mfoot{padding:10px 15px;border-top:1px solid #d1d9e6;display:flex;gap:7px;justify-content:flex-end;background:#f7f8fa;}
+.dpick-wrap{position:relative;width:100%;}
+.dpick-display{display:flex;align-items:center;background:#fff;border:1px solid #d1d9e6;border-radius:3px;padding:7px 9px;font-size:13px;color:#1a2b44;cursor:pointer;width:100%;box-sizing:border-box;gap:6px;}
+.dpick-wrap:focus-within .dpick-display{border-color:#f47920;}
+.dpick-display-text{flex:1;}
+.dpick-display-text.empty{color:#8fa0b8;}
+.dpick-cal-icon{color:#b0bdd0;font-size:14px;flex-shrink:0;}
+.dpick-hidden{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2;}
 
 .dvla-row{display:flex;align-items:center;gap:6px;margin-top:3px;}
 .dvla-btn{background:#1a2b44;border:none;color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -442,8 +453,24 @@ body{background:#f0f2f5;font-family:Arial,sans-serif;color:#1a2b44;min-height:10
       </div>
       <div class="fg"><label class="flbl">Repair Category</label><div class="sselrow" id="catSelRow" style="grid-template-columns:repeat(4,1fr);"></div></div>
       <div class="frow">
-        <div class="fg"><label class="flbl">Date In</label><input class="finput" type="date" id="fDateIn"></div>
-        <div class="fg"><label class="flbl">ETA</label><input class="finput" type="date" id="fEta"></div>
+        <div class="fg"><label class="flbl">Date In</label>
+          <div class="dpick-wrap" id="dpDateIn">
+            <div class="dpick-display" onclick="document.getElementById('fDateIn_hidden').showPicker&&document.getElementById('fDateIn_hidden').showPicker()">
+              <span class="dpick-display-text empty" id="fDateIn_txt">DD/MM/YYYY</span>
+              <span class="dpick-cal-icon">&#128197;</span>
+            </div>
+            <input type="date" id="fDateIn_hidden" class="dpick-hidden" oninput="dpickSync('fDateIn')">
+          </div>
+        </div>
+        <div class="fg"><label class="flbl">ETA</label>
+          <div class="dpick-wrap" id="dpEta">
+            <div class="dpick-display" onclick="document.getElementById('fEta_hidden').showPicker&&document.getElementById('fEta_hidden').showPicker()">
+              <span class="dpick-display-text empty" id="fEta_txt">DD/MM/YYYY</span>
+              <span class="dpick-cal-icon">&#128197;</span>
+            </div>
+            <input type="date" id="fEta_hidden" class="dpick-hidden" oninput="dpickSync('fEta')">
+          </div>
+        </div>
       </div>
       <div class="fg"><label class="flbl">Quick Flags</label>
         <div class="flagrow">
@@ -626,6 +653,33 @@ function subscribeToChanges() {
     .subscribe();
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
+/* ── Custom date picker helpers ── */
+function dpickSync(prefix){
+  /* Called when hidden date input changes — updates the display text */
+  var iso=document.getElementById(prefix+'_hidden').value;
+  var txt=document.getElementById(prefix+'_txt');
+  if(iso){
+    var p=iso.split('-');
+    txt.textContent=p[2]+'/'+p[1]+'/'+p[0];
+    txt.classList.remove('empty');
+  } else {
+    txt.textContent='DD/MM/YYYY';
+    txt.classList.add('empty');
+  }
+}
+function isoToDp(iso,prefix){
+  /* iso = YYYY-MM-DD — populate hidden input and sync display */
+  document.getElementById(prefix+'_hidden').value=iso||'';
+  dpickSync(prefix);
+}
+function dpToIso(prefix){
+  return document.getElementById(prefix+'_hidden').value||'';
+}
+function clearDp(prefix){
+  document.getElementById(prefix+'_hidden').value='';
+  dpickSync(prefix);
+}
+function initDpickAuto(prefix){ /* no-op — kept for compatibility */ }
 function fmtDate(iso){if(!iso)return'';var p=iso.split('-');if(p.length!==3)return iso;return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
 
 function mk(tag,cls){var n=document.createElement(tag);if(cls)n.className=cls;if(tag==="button")n.type="button";return n;}
@@ -633,17 +687,32 @@ function tx(t){return document.createTextNode(t);}
 function app(p){for(var i=1;i<arguments.length;i++){if(arguments[i])p.appendChild(arguments[i]);}return p;}
 function clr(id){var n=document.getElementById(id);while(n.firstChild)n.removeChild(n.firstChild);return n;}
 function opt(v,l,s){var o=mk("option");o.value=v;o.textContent=l;if(s)o.selected=true;return o;}
+function etaStatus(job){
+  if(!job.eta)return"none";
+  var now=new Date();
+  var todayMid=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  var etaDate=new Date(job.eta);
+  var etaMid=new Date(etaDate.getFullYear(),etaDate.getMonth(),etaDate.getDate());
+  var diff=Math.round((etaMid-todayMid)/86400000);
+  if(diff<0)return"overdue";
+  if(diff===0)return"today";
+  if(diff===1)return"tomorrow";
+  return"ok";
+}
 function getAutoFlags(job){
   var f=[];var days=job.dateIn?Math.floor((Date.now()-new Date(job.dateIn))/86400000):0;
-  var ov=job.eta&&new Date(job.eta)<new Date();
-  if(ov&&job.stage!=="invoiced")f.push({cls:"fauto-ov",label:"OVERDUE"});
+  var es=etaStatus(job);
+  if(es==="overdue"&&job.stage!=="invoiced")f.push({cls:"fauto-ov",label:"OVERDUE"});
+  if(es==="today"&&job.stage!=="invoiced")f.push({cls:"fauto-today",label:"DUE TODAY"});
+  if(es==="tomorrow"&&job.stage!=="invoiced")f.push({cls:"fauto-soon",label:"DUE TOMORROW"});
   if((job.hireDays||0)>=5)f.push({cls:"fauto-hire",label:"HIRE "+(job.hireDays)+"d"});
-  if(job.stage==="authority"&&days>=2&&!ov)f.push({cls:"fauto-auth",label:"AUTH 48h+"});
+  if(job.stage==="authority"&&days>=2&&es==="ok")f.push({cls:"fauto-auth",label:"AUTH 48h+"});
   return f;
 }
 function scoreJob(job){
   var days=job.dateIn?Math.floor((Date.now()-new Date(job.dateIn))/86400000):0;
-  var ov=job.eta&&new Date(job.eta)<new Date();
+  var es=etaStatus(job);
+  var ov=es==="overdue";
   var fl=job.flags||[];
   var hasCH=fl.indexOf("ch")!==-1,hasTL=fl.indexOf("tl")!==-1,hasComp=fl.indexOf("complaint")!==-1;
   var noResp=job.authSub==="No Response 48h"||job.authSub==="Engineer Overdue";
@@ -654,10 +723,12 @@ function scoreJob(job){
   if(noResp)return{lv:"crit",sc:82,why:job.authSub};
   if(job.stage==="authority"&&days>=2)return{lv:"crit",sc:80,why:"Auth 48h+"};
   if((job.hireDays||0)>=5)return{lv:"warn",sc:75,why:"Hire "+(job.hireDays)+"d"};
+  if(es==="today"&&job.stage!=="invoiced")return{lv:"warn",sc:72,why:"Due Today"};
   if(hasCH&&days>=1)return{lv:"warn",sc:70,why:"CH Day "+days};
   if(fl.indexOf("supp")!==-1)return{lv:"warn",sc:60,why:"Supp Pending"};
   if(fl.indexOf("callback")!==-1)return{lv:"warn",sc:55,why:"Callback Due"};
   if(fl.indexOf("eng")!==-1)return{lv:"warn",sc:50,why:"Engineer"};
+  if(es==="tomorrow"&&job.stage!=="invoiced")return{lv:"info",sc:38,why:"Due Tomorrow"};
   if(fl.indexOf("excess")!==-1)return{lv:"info",sc:35,why:"Excess O/S"};
   if(job.stage==="ready")return{lv:"info",sc:30,why:"Ready"};
   return{lv:"ok",sc:10,why:"On Track"};
@@ -668,10 +739,12 @@ function buildChaseItems(jobs){
     if(j.stage==="invoiced")return;
     var fl=j.flags||[];
     var days=j.dateIn?Math.floor((Date.now()-new Date(j.dateIn))/86400000):0;
-    var ov=j.eta&&new Date(j.eta)<new Date();
+    var es=etaStatus(j);
     var stage=STAGE_LABELS[j.stage]||j.stage;
     function add(why,lv){items.push({job:j,why:why,lv:lv,stage:stage,days:days});}
-    if(ov)add("ETA overdue — chase completion today","crit");
+    if(es==="overdue")add("ETA overdue — chase completion today","crit");
+    if(es==="today")add("Due today — confirm completion or flag delay","warn");
+    if(es==="tomorrow")add("Due tomorrow — verify job is on track for handover","info");
     if(j.stage==="authority"&&days>=2)add("Auth held "+days+" days — call insurer","crit");
     if(j.authSub==="No Response 48h")add("No insurer response 48h+","crit");
     if(j.authSub==="Engineer Overdue")add("Engineer report overdue","crit");
@@ -839,14 +912,19 @@ function makeCard(job){
   var autoFlags=getAutoFlags(job);
   var card=mk("div","jcard "+uc[urg.lv]+(autoFlags.length?" auto-flagged":""));
   var days=job.dateIn?Math.floor((Date.now()-new Date(job.dateIn))/86400000):null;
-  var ov=job.eta&&new Date(job.eta)<new Date();
+  var es=etaStatus(job);
+  var ov=es==="overdue";
   var top=mk("div","jcard-top");
   var reg=mk("div","jreg");reg.textContent=job.reg||"?";
   var ub=mk("div","jurg "+uc[urg.lv]);ub.textContent=urg.why;
   var catDef=job.repCat?REP_CATS.filter(function(c){return c.id===job.repCat;})[0]:null;
   var catB=mk("div","jcat "+(catDef?catDef.cls:"cat-none"));catB.textContent=catDef?catDef.label:"?";
   app(top,reg,ub,catB);
-  if(days!==null){var dEl=mk("div","jdays"+(ov?" ov":""));dEl.textContent=(ov?"OVR ":"")+days+"d";top.appendChild(dEl);}
+  if(days!==null){
+    var dayCls=ov?" ov":(es==="today"?" td":(es==="tomorrow"?" sn":""));
+    var dayLbl=ov?"OVR ":(es==="today"?"TODAY ":(es==="tomorrow"?"TMRW ":""));
+    var dEl=mk("div","jdays"+dayCls);dEl.textContent=dayLbl+days+"d";top.appendChild(dEl);
+  }
   card.appendChild(top);
   if(job.veh||job.ins){
     var row2=mk("div","jrow2");
@@ -884,6 +962,7 @@ function openAdd(){
   document.getElementById("mTitle").textContent="Add Job";
   document.getElementById("delBtn").style.display="none";
   clearModal();fillModal(null);
+  initDpickAuto("fDateIn");initDpickAuto("fEta");
   document.getElementById("expandBody").classList.remove("open");
   document.getElementById("expandToggle").classList.remove("open");
   document.getElementById("jobModal").classList.add("op");
@@ -908,8 +987,8 @@ document.getElementById("expandToggle").addEventListener("click",function(){
 function clearModal(){
   ["fReg","fVeh","fRef","fNotes","fLabHrs","fValue","fHireDays","fSuppVal"].forEach(function(id){document.getElementById(id).value="";});
   document.querySelectorAll(".ftog").forEach(function(b){b.className="ftog";});
-  document.getElementById("fDateIn").value=new Date().toISOString().split("T")[0];
-  document.getElementById("fEta").value="";document.getElementById("fAuthSub").value="";updateAuthVis();
+  var todayIso=new Date().toISOString().split("T")[0];isoToDp(todayIso,"fDateIn");clearDp("fEta");
+  document.getElementById("fAuthSub").value="";updateAuthVis();
   document.getElementById("dvlaRow").style.display="none";
   document.getElementById("dvlaStatus").style.display="none";
   document.getElementById("dvlaDetail").innerHTML="";
@@ -938,7 +1017,7 @@ function fillModal(job){
   if(job){
     document.getElementById("fReg").value=job.reg||"";document.getElementById("fVeh").value=job.veh||"";
     document.getElementById("fRef").value=job.ref||"";document.getElementById("fNotes").value=job.notes||"";
-    document.getElementById("fDateIn").value=job.dateIn||"";document.getElementById("fEta").value=job.eta||"";
+    isoToDp(job.dateIn||"","fDateIn");isoToDp(job.eta||"","fEta");
     document.getElementById("fLabHrs").value=job.labHrs||"";document.getElementById("fValue").value=job.value||"";
     document.getElementById("fHireDays").value=job.hireDays||"";document.getElementById("fSuppVal").value=job.suppVal||"";
     document.getElementById("fAuthSub").value=job.authSub||"";
@@ -954,7 +1033,7 @@ document.querySelectorAll(".ftog").forEach(function(btn){
 document.getElementById("saveBtn").addEventListener("click",function(){
   var reg=document.getElementById("fReg").value.trim().toUpperCase();if(!reg){alert("Registration is required.");return;}
   var flags=[];document.querySelectorAll(".ftog").forEach(function(b){var f=b.dataset.flag;if(b.classList.contains("on-"+f))flags.push(f);});
-  var d={reg:reg,veh:document.getElementById("fVeh").value.trim(),ins:document.getElementById("fIns2").value,ref:document.getElementById("fRef").value.trim(),estId:document.getElementById("fEst").value,techId:document.getElementById("fTech").value,stage:modalStage,repCat:modalCat,authSub:modalStage==="authority"?document.getElementById("fAuthSub").value:"",flags:flags,notes:document.getElementById("fNotes").value.trim(),dateIn:document.getElementById("fDateIn").value,eta:document.getElementById("fEta").value,labHrs:parseFloat(document.getElementById("fLabHrs").value)||0,value:parseFloat(document.getElementById("fValue").value)||0,hireDays:parseInt(document.getElementById("fHireDays").value)||0,suppVal:parseFloat(document.getElementById("fSuppVal").value)||0};
+  var d={reg:reg,veh:document.getElementById("fVeh").value.trim(),ins:document.getElementById("fIns2").value,ref:document.getElementById("fRef").value.trim(),estId:document.getElementById("fEst").value,techId:document.getElementById("fTech").value,stage:modalStage,repCat:modalCat,authSub:modalStage==="authority"?document.getElementById("fAuthSub").value:"",flags:flags,notes:document.getElementById("fNotes").value.trim(),dateIn:dpToIso("fDateIn"),eta:dpToIso("fEta"),labHrs:parseFloat(document.getElementById("fLabHrs").value)||0,value:parseFloat(document.getElementById("fValue").value)||0,hireDays:parseInt(document.getElementById("fHireDays").value)||0,suppVal:parseFloat(document.getElementById("fSuppVal").value)||0};
   if(editId){var idx=S.jobs.findIndex(function(j){return j.id===editId;});if(idx!==-1)S.jobs[idx]=Object.assign({},S.jobs[idx],d);}
   else{S.jobs.push(Object.assign({id:uid()},d));}
   save();closeModal();renderBoard();renderHeader();renderUrgStrip();
